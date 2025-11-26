@@ -89,17 +89,20 @@ CREATE TABLE IF NOT EXISTS library_items (
 -- Enable RLS on library_items
 ALTER TABLE library_items ENABLE ROW LEVEL SECURITY;
 
--- Library items policies
+-- Library items policies (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view own library items" ON library_items;
 CREATE POLICY "Users can view own library items"
   ON library_items FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own library items" ON library_items;
 CREATE POLICY "Users can insert own library items"
   ON library_items FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own library items" ON library_items;
 CREATE POLICY "Users can delete own library items"
   ON library_items FOR DELETE
   TO authenticated

@@ -23,7 +23,7 @@ END $$;
 
 -- Create messages table for DM system
 CREATE TABLE IF NOT EXISTS messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   receiver_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   message_text TEXT NOT NULL,
@@ -41,16 +41,20 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(sender_id, rece
 -- Enable RLS on messages
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
--- RLS policies for messages
+-- RLS policies for messages (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view their own messages" ON messages;
 CREATE POLICY "Users can view their own messages" ON messages
   FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 
+DROP POLICY IF EXISTS "Users can send messages" ON messages;
 CREATE POLICY "Users can send messages" ON messages
   FOR INSERT WITH CHECK (auth.uid() = sender_id);
 
+DROP POLICY IF EXISTS "Users can update their sent messages" ON messages;
 CREATE POLICY "Users can update their sent messages" ON messages
   FOR UPDATE USING (auth.uid() = sender_id);
 
+DROP POLICY IF EXISTS "Users can delete their own messages" ON messages;
 CREATE POLICY "Users can delete their own messages" ON messages
   FOR DELETE USING (auth.uid() = sender_id);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, ArrowLeft, Loader2, Search, MessageCircle, Trash2, Ban, MoreVertical, X } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
@@ -66,7 +66,24 @@ export default function Messages() {
           table: 'messages',
           filter: `receiver_id=eq.${user.id}`,
         },
-        () => {
+        (payload) => {
+          console.log('New message received:', payload);
+          loadConversations();
+          if (selectedConversation) {
+            loadMessages(selectedConversation);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Message sent:', payload);
           loadConversations();
           if (selectedConversation) {
             loadMessages(selectedConversation);
@@ -89,22 +106,8 @@ export default function Messages() {
       const userId = urlParams.get('user');
       
       if (userId && userId !== user.id) {
-        setSelectedConversation(userId);
-        
-        // Load user profile if not in conversations list
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, full_name, username, avatar_url')
-            .eq('id', userId)
-            .single();
-
-          if (profile && !searchResults.find(u => u.id === userId)) {
-            setSearchResults([profile]);
-          }
-        } catch (error) {
-          console.error('Error loading user profile:', error);
-        }
+        // Start conversation with the user
+        await startConversation(userId);
       }
     };
 
@@ -116,6 +119,18 @@ export default function Messages() {
       loadMessages(selectedConversation);
     }
   }, [selectedConversation]);
+
+  // Separate effect for loading user profile
+  useEffect(() => {
+    if (selectedConversation && conversations.length > 0) {
+      const userExists = conversations.find(c => c.user_id === selectedConversation);
+      
+      if (!userExists) {
+        console.log('User not found in conversations, loading profile for:', selectedConversation);
+        loadUserProfile(selectedConversation);
+      }
+    }
+  }, [selectedConversation, conversations]);
 
   useEffect(() => {
     scrollToBottom();
@@ -135,6 +150,44 @@ export default function Messages() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const loadUserProfile = async (userId: string) => {
+    if (!userId) return;
+    
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return;
+      }
+
+      if (profile) {
+        console.log('Loaded user profile:', profile);
+        // Add to conversations list if not already there
+        setConversations(prev => {
+          const exists = prev.find(c => c.user_id === profile.id);
+          if (exists) return prev;
+          
+          return [{
+            user_id: profile.id,
+            full_name: profile.full_name,
+            username: profile.username,
+            avatar_url: profile.avatar_url,
+            last_message: null,
+            last_message_at: new Date().toISOString(),
+            unread_count: 0
+          }, ...prev];
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
   };
 
   const loadConversations = async () => {
@@ -304,21 +357,35 @@ export default function Messages() {
     if (!user || !selectedConversation || !newMessage.trim()) return;
 
     setSending(true);
+    const messageText = newMessage.trim();
+    setNewMessage(''); // Clear input immediately for better UX
 
     try {
-      const { error } = await supabase.from('messages').insert({
+      const { data, error } = await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: selectedConversation,
-        message_text: newMessage.trim(),
-      });
+        message_text: messageText,
+      }).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error sending message:', error);
+        setNewMessage(messageText); // Restore message on error
+        return;
+      }
 
-      setNewMessage('');
+      console.log('Message sent successfully:', data);
+      
+      // Immediately add message to local state for instant feedback
+      if (data && data[0]) {
+        setMessages(prev => [...prev, data[0]]);
+      }
+      
+      // Refresh conversations and messages
       loadMessages(selectedConversation);
       loadConversations();
     } catch (error) {
       console.error('Error sending message:', error);
+      setNewMessage(messageText); // Restore message on error
     } finally {
       setSending(false);
     }
@@ -348,25 +415,28 @@ export default function Messages() {
   };
 
   const startConversation = async (userId: string) => {
-    // Select conversation immediately
-    setSelectedConversation(userId);
+    console.log('Starting conversation with:', userId);
     
-    // Clear search query (but keep search results so selectedUser can be found)
-    setSearchQuery('');
-    
-    // If user is not in conversations list, fetch their profile and add them
+    // If user is not in conversations list, fetch their profile and add them FIRST
     const existingConv = conversations.find(c => c.user_id === userId);
     if (!existingConv) {
       try {
-        const { data: profile } = await supabase
+        console.log('User not in conversations, fetching profile...');
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('id, full_name, username, avatar_url')
           .eq('id', userId)
           .single();
 
+        if (error) {
+          console.error('Profile fetch error:', error);
+          return;
+        }
+
         if (profile) {
-          // Add to conversations list
-          setConversations(prev => [{
+          console.log('Profile fetched:', profile);
+          // Add to conversations list FIRST
+          const newConversation = {
             user_id: profile.id,
             full_name: profile.full_name,
             username: profile.username,
@@ -374,17 +444,30 @@ export default function Messages() {
             last_message: null,
             last_message_at: new Date().toISOString(),
             unread_count: 0
-          }, ...prev]);
+          };
+          
+          setConversations(prev => [newConversation, ...prev]);
+          
+          // THEN select conversation
+          setSelectedConversation(userId);
+          
+          // Clear search after everything is set up
+          setTimeout(() => {
+            setSearchQuery('');
+            setSearchResults([]);
+          }, 200);
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
+        return;
       }
-    }
-    
-    // Only clear search results after a delay to ensure selectedUser is found
-    setTimeout(() => {
+    } else {
+      console.log('User already in conversations');
+      // User already exists in conversations
+      setSelectedConversation(userId);
+      setSearchQuery('');
       setSearchResults([]);
-    }, 100);
+    }
   };
 
   const formatTime = (dateString: string) => {
@@ -392,8 +475,39 @@ export default function Messages() {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const selectedUser = conversations.find(c => c.user_id === selectedConversation) || 
-    searchResults.find(u => u.id === selectedConversation);
+  // Find selected user from conversations or search results
+  const selectedUser = React.useMemo(() => {
+    if (!selectedConversation) return null;
+    
+    // First check conversations
+    const convUser = conversations.find(c => c.user_id === selectedConversation);
+    if (convUser) {
+      console.log('Found user in conversations:', convUser);
+      return convUser;
+    }
+    
+    // Then check search results
+    const searchUser = searchResults.find(u => u.id === selectedConversation);
+    if (searchUser) {
+      console.log('Found user in search results:', searchUser);
+      return searchUser;
+    }
+    
+    // Debug: Log current state
+    console.log('User not found!', {
+      selectedConversation,
+      conversationsCount: conversations.length,
+      searchResultsCount: searchResults.length
+    });
+    
+    // Last resort - loading state
+    return { 
+      id: selectedConversation, 
+      full_name: 'Loading...', 
+      username: null, 
+      avatar_url: null 
+    };
+  }, [selectedConversation, conversations, searchResults]);
 
   if (!user) return null;
 
@@ -426,7 +540,8 @@ export default function Messages() {
 
                 {/* Search Results */}
                 {searchResults.length > 0 && searchQuery.length > 0 && (
-                  <div className="mt-2 max-h-60 overflow-y-auto space-y-1">
+                  <div className="mt-2 max-h-60 overflow-y-auto space-y-1 border-b border-purple-500/20 pb-2">
+                    <div className="text-xs text-slate-400 px-3 py-1 font-medium">Search Results</div>
                     {searchResults.map((userProfile) => (
                       <button
                         key={userProfile.id}
@@ -448,6 +563,13 @@ export default function Messages() {
                         </div>
                       </button>
                     ))}
+                  </div>
+                )}
+                
+                {searching && searchQuery.length > 0 && (
+                  <div className="mt-2 flex items-center justify-center p-4">
+                    <Loader2 className="animate-spin text-purple-400" size={20} />
+                    <span className="ml-2 text-slate-400">Searching...</span>
                   </div>
                 )}
               </div>

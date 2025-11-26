@@ -54,33 +54,39 @@ CREATE TABLE IF NOT EXISTS notifications (
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
--- Follows policies
+-- Follows policies (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view all follows" ON follows;
 CREATE POLICY "Users can view all follows"
   ON follows FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Anyone can view follows" ON follows;
 CREATE POLICY "Anyone can view follows"
   ON follows FOR SELECT
   TO anon
   USING (true);
 
+DROP POLICY IF EXISTS "Users can follow others" ON follows;
 CREATE POLICY "Users can follow others"
   ON follows FOR INSERT
   TO authenticated
   WITH CHECK (follower_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can unfollow" ON follows;
 CREATE POLICY "Users can unfollow"
   ON follows FOR DELETE
   TO authenticated
   USING (follower_id = auth.uid());
 
--- Notifications policies
+-- Notifications policies (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
 CREATE POLICY "Users can view own notifications"
   ON notifications FOR SELECT
   TO authenticated
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
 CREATE POLICY "Users can update own notifications"
   ON notifications FOR UPDATE
   TO authenticated

@@ -54,23 +54,27 @@ ALTER TABLE dream_comments ENABLE ROW LEVEL SECURITY;
 
 -- Update dreams RLS policy to allow viewing public dreams
 DROP POLICY IF EXISTS "Users can view own dreams" ON dreams;
+DROP POLICY IF EXISTS "Users can view own dreams or public dreams" ON dreams;
 CREATE POLICY "Users can view own dreams or public dreams"
   ON dreams FOR SELECT
   TO authenticated
   USING (user_id = auth.uid() OR is_public = true);
 
 -- Allow anonymous users to view public dreams
+DROP POLICY IF EXISTS "Anyone can view public dreams" ON dreams;
 CREATE POLICY "Anyone can view public dreams"
   ON dreams FOR SELECT
   TO anon
   USING (is_public = true);
 
 -- Dream likes policies
+DROP POLICY IF EXISTS "Users can view all likes" ON dream_likes;
 CREATE POLICY "Users can view all likes"
   ON dream_likes FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Anyone can view likes on public dreams" ON dream_likes;
 CREATE POLICY "Anyone can view likes on public dreams"
   ON dream_likes FOR SELECT
   TO anon
@@ -82,22 +86,26 @@ CREATE POLICY "Anyone can view likes on public dreams"
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert own likes" ON dream_likes;
 CREATE POLICY "Users can insert own likes"
   ON dream_likes FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete own likes" ON dream_likes;
 CREATE POLICY "Users can delete own likes"
   ON dream_likes FOR DELETE
   TO authenticated
   USING (user_id = auth.uid());
 
 -- Dream comments policies
+DROP POLICY IF EXISTS "Users can view all comments" ON dream_comments;
 CREATE POLICY "Users can view all comments"
   ON dream_comments FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Anyone can view comments on public dreams" ON dream_comments;
 CREATE POLICY "Anyone can view comments on public dreams"
   ON dream_comments FOR SELECT
   TO anon
@@ -109,11 +117,13 @@ CREATE POLICY "Anyone can view comments on public dreams"
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert own comments" ON dream_comments;
 CREATE POLICY "Users can insert own comments"
   ON dream_comments FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete own comments" ON dream_comments;
 CREATE POLICY "Users can delete own comments"
   ON dream_comments FOR DELETE
   TO authenticated

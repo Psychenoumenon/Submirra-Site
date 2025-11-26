@@ -65,35 +65,41 @@ CREATE TABLE IF NOT EXISTS daily_limits (
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_limits ENABLE ROW LEVEL SECURITY;
 
--- Subscriptions policies
+-- Subscriptions policies (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view own subscription" ON subscriptions;
 CREATE POLICY "Users can view own subscription"
   ON subscriptions FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own subscription" ON subscriptions;
 CREATE POLICY "Users can update own subscription"
   ON subscriptions FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own subscription" ON subscriptions;
 CREATE POLICY "Users can insert own subscription"
   ON subscriptions FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
--- Daily limits policies
+-- Daily limits policies (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view own daily limits" ON daily_limits;
 CREATE POLICY "Users can view own daily limits"
   ON daily_limits FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own daily limits" ON daily_limits;
 CREATE POLICY "Users can update own daily limits"
   ON daily_limits FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own daily limits" ON daily_limits;
 CREATE POLICY "Users can insert own daily limits"
   ON daily_limits FOR INSERT
   TO authenticated

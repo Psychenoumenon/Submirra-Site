@@ -80,9 +80,12 @@ export default function SignIn() {
         }
         const { error } = await signUp(email, password, fullName, username);
         if (error) {
+          console.error('SignUp UI Error:', error);
           const errorMessage = error.message.toLowerCase();
           if (errorMessage.includes('already registered') || errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
             setError(t.auth.emailAlreadyExists);
+          } else if (errorMessage.includes('configuration')) {
+            setError('Supabase yapılandırması eksik. .env dosyasını kontrol edin.');
           } else {
             setError(error.message);
           }

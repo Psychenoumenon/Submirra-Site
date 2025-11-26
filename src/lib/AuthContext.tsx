@@ -41,14 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Generic error messages - don't expose Supabase
         const genericError = new Error(
           error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed')
-            ? 'Invalid email or password. Please try again.'
-            : 'Unable to sign in. Please check your credentials and try again.'
+            ? 'Geçersiz e-posta veya şifre. Lütfen tekrar deneyin.'
+            : error.message.includes('Email not confirmed')
+            ? 'E-posta adresiniz henüz onaylanmamış. Lütfen e-postanızı kontrol edin.'
+            : 'Giriş yapılamadı. Bilgilerinizi kontrol edip tekrar deneyin.'
         );
         return { error: genericError };
       }
       return { error: null };
     } catch (error) {
-      return { error: new Error('Unable to sign in. Please try again later.') };
+      return { error: new Error('Giriş yapılamadı. Lütfen daha sonra tekrar deneyin.') };
     }
   };
 
@@ -62,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (existingUser) {
-        return { error: new Error('This username is already taken. Please choose a different one.') };
+        return { error: new Error('Bu kullanıcı adı zaten alınmış. Lütfen farklı bir tane seçin.') };
       }
 
       // Ignore 'not found' errors (PGRST116) - means username is available
@@ -86,13 +88,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Log error in development for debugging
         if (import.meta.env.DEV) {
           console.error('SignUp error:', error);
+          console.error('Error details:', {
+            message: error.message,
+            status: error.status,
+            statusText: error.statusText
+          });
         }
         
         // Generic error messages - don't expose Supabase
         const genericError = new Error(
           error.message.includes('already registered') || error.message.includes('already exists') || error.message.includes('User already registered')
-            ? 'This email is already registered. Please sign in or use a different email.'
-            : 'Unable to create account. Please try again.'
+            ? 'Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta kullanın.'
+            : error.message.includes('Password should be at least')
+            ? 'Şifre en az 6 karakter olmalıdır.'
+            : 'Hesap oluşturulamadı. Lütfen tekrar deneyin.'
         );
         throw genericError;
       }
@@ -139,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (import.meta.env.DEV) {
         console.error('SignUp exception:', error);
       }
-      return { error: error instanceof Error ? error : new Error('Unable to create account. Please try again.') };
+      return { error: error instanceof Error ? error : new Error('Hesap oluşturulamadı. Lütfen tekrar deneyin.') };
     }
   };
 

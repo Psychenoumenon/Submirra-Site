@@ -68,40 +68,47 @@ CREATE TABLE IF NOT EXISTS dreams (
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dreams ENABLE ROW LEVEL SECURITY;
 
--- Profiles policies
+-- Profiles policies (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT
   TO authenticated
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 CREATE POLICY "Users can insert own profile"
   ON profiles FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   TO authenticated
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
 
--- Dreams policies
+-- Dreams policies (drop if exists first to avoid conflicts)
+DROP POLICY IF EXISTS "Users can view own dreams" ON dreams;
 CREATE POLICY "Users can view own dreams"
   ON dreams FOR SELECT
   TO authenticated
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can insert own dreams" ON dreams;
 CREATE POLICY "Users can insert own dreams"
   ON dreams FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own dreams" ON dreams;
 CREATE POLICY "Users can update own dreams"
   ON dreams FOR UPDATE
   TO authenticated
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete own dreams" ON dreams;
 CREATE POLICY "Users can delete own dreams"
   ON dreams FOR DELETE
   TO authenticated
