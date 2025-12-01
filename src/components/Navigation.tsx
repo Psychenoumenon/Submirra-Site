@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Logo from './Logo';
 import LanguageSwitcher from './LanguageSwitcher';
 import Notifications from './Notifications';
@@ -6,7 +6,8 @@ import Settings from './Settings';
 import { useNavigate, useCurrentPage } from './Router';
 import { useAuth } from '../lib/AuthContext';
 import { useLanguage } from '../lib/i18n';
-import { LogOut, Menu, X, MessageSquare } from 'lucide-react';
+import { LogOut, Menu, X, MessageSquare, User } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Navigation() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function Navigation() {
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<{avatar_url: string | null, full_name: string} | null>(null);
 
   const navItems = [
     { label: t.nav.home, path: '/' as const },
@@ -34,6 +36,33 @@ export default function Navigation() {
     navigate(path);
     setIsMobileMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (user) {
+      const loadUserProfile = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('avatar_url, full_name')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            console.error('Error loading user profile:', error);
+            return;
+          }
+
+          setUserProfile(data);
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+        }
+      };
+
+      loadUserProfile();
+    } else {
+      setUserProfile(null);
+    }
+  }, [user]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-pink-500/20 shadow-lg shadow-pink-500/5">
@@ -92,15 +121,26 @@ export default function Navigation() {
                 <button
                   onClick={() => navigate('/messages')}
                   className="relative p-2 text-slate-400 hover:text-purple-400 transition-colors"
-                  title="Messages"
+                  title={t.nav.messages}
                 >
                   <MessageSquare size={20} />
                 </button>
                 <button
                   onClick={() => navigate('/profile')}
-                  className="px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:text-pink-400 transition-all duration-200"
+                  className="flex items-center gap-2 p-1 rounded-full bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 group"
+                  title={userProfile?.full_name || 'Profile'}
                 >
-                  Profile
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden group-hover:border-pink-500/50 transition-all">
+                    {userProfile?.avatar_url ? (
+                      <img
+                        src={userProfile.avatar_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <User className="text-pink-400" size={16} />
+                    )}
+                  </div>
                 </button>
                 <button
                   onClick={signOut}
@@ -184,9 +224,20 @@ export default function Navigation() {
                       navigate('/profile');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="text-left px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:bg-slate-800/70 hover:text-pink-400 transition-all duration-200"
+                    className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:bg-slate-800/70 hover:text-pink-400 transition-all duration-200"
                   >
-                    Profile
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden">
+                      {userProfile?.avatar_url ? (
+                        <img
+                          src={userProfile.avatar_url}
+                          alt="Profile"
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <User className="text-pink-400" size={12} />
+                      )}
+                    </div>
+                    {userProfile?.full_name || 'Profile'}
                   </button>
                   <button
                     onClick={() => {

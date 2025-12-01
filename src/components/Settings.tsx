@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, X, Shield, User, Loader2, Bell, Lock } from 'lucide-react';
+import { Settings as SettingsIcon, X, Shield, User, Loader2, Bell, Lock, Star, UserX } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/ToastContext';
@@ -16,18 +16,31 @@ interface BlockedUser {
   };
 }
 
+interface FavoriteUser {
+  id: string;
+  favorite_user_id: string;
+  favorite_user: {
+    id: string;
+    full_name: string;
+    username: string | null;
+    avatar_url: string | null;
+  };
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'blocked' | 'privacy' | 'notifications'>('blocked');
+  const [activeTab, setActiveTab] = useState<'blocked' | 'favorites' | 'privacy' | 'notifications'>('blocked');
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [favoriteUsers, setFavoriteUsers] = useState<FavoriteUser[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
       loadBlockedUsers();
+      loadFavoriteUsers();
     }
   }, [isOpen, user]);
 
@@ -36,31 +49,126 @@ export default function Settings() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      console.log('Loading blocked users for user:', user.id);
+      
+      // First get the blocked user IDs
+      const { data: blocksData, error: blocksError } = await supabase
         .from('user_blocks')
-        .select(`
-          id,
-          blocked_id,
-          blocked_user:blocked_id (
-            id,
-            full_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('id, blocked_id')
         .eq('blocker_id', user.id);
 
-      if (error) throw error;
+      if (blocksError) {
+        console.error('Error loading blocks:', blocksError);
+        throw blocksError;
+      }
 
-      const formattedData = (data || []).map((item: any) => ({
-        id: item.id,
-        blocked_id: item.blocked_id,
-        blocked_user: Array.isArray(item.blocked_user) ? item.blocked_user[0] : item.blocked_user
-      })).filter((item: any) => item.blocked_user);
+      console.log('Found blocks:', blocksData);
 
+      if (!blocksData || blocksData.length === 0) {
+        setBlockedUsers([]);
+        return;
+      }
+
+      // Then get the profile information for each blocked user
+      const blockedUserIds = blocksData.map(block => block.blocked_id);
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', blockedUserIds);
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Found profiles:', profilesData);
+
+      // Combine the data
+      const formattedData = blocksData.map(block => {
+        const profile = profilesData?.find(p => p.id === block.blocked_id);
+        return {
+          id: block.id,
+          blocked_id: block.blocked_id,
+          blocked_user: profile || {
+            id: block.blocked_id,
+            full_name: 'Unknown User',
+            username: null,
+            avatar_url: null
+          }
+        };
+      }).filter(item => item.blocked_user);
+
+      console.log('Final formatted data:', formattedData);
       setBlockedUsers(formattedData);
     } catch (error) {
       console.error('Error loading blocked users:', error);
+      showToast('Failed to load blocked users', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFavoriteUsers = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      console.log('Loading favorite users for user:', user.id);
+      
+      // First get the favorite user IDs
+      const { data: favoritesData, error: favoritesError } = await supabase
+        .from('user_favorites')
+        .select('id, favorite_user_id')
+        .eq('user_id', user.id);
+
+      if (favoritesError) {
+        console.error('Error loading favorites:', favoritesError);
+        throw favoritesError;
+      }
+
+      console.log('Found favorites:', favoritesData);
+
+      if (!favoritesData || favoritesData.length === 0) {
+        setFavoriteUsers([]);
+        return;
+      }
+
+      // Then get the profile information for each favorite user
+      const favoriteUserIds = favoritesData.map(fav => fav.favorite_user_id);
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', favoriteUserIds);
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Found profiles:', profilesData);
+
+      // Combine the data
+      const formattedData = favoritesData.map(favorite => {
+        const profile = profilesData?.find(p => p.id === favorite.favorite_user_id);
+        return {
+          id: favorite.id,
+          favorite_user_id: favorite.favorite_user_id,
+          favorite_user: profile || {
+            id: favorite.favorite_user_id,
+            full_name: 'Unknown User',
+            username: null,
+            avatar_url: null
+          }
+        };
+      }).filter(item => item.favorite_user);
+
+      console.log('Final formatted favorites data:', formattedData);
+      setFavoriteUsers(formattedData);
+    } catch (error) {
+      console.error('Error loading favorite users:', error);
+      showToast('Failed to load favorite users', 'error');
     } finally {
       setLoading(false);
     }
@@ -86,6 +194,29 @@ export default function Settings() {
     } catch (error) {
       console.error('Error unblocking user:', error);
       showToast('Failed to unblock user', 'error');
+    }
+  };
+
+  const removeFavorite = async (favoriteId: string, userName: string) => {
+    if (!user) return;
+
+    if (!confirm(`${userName} kullanıcısını favorilerden çıkarmak istediğinizden emin misiniz?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_favorites')
+        .delete()
+        .eq('id', favoriteId);
+
+      if (error) throw error;
+
+      setFavoriteUsers(prev => prev.filter(f => f.id !== favoriteId));
+      showToast(`${userName} favorilerden çıkarıldı`, 'success');
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+      showToast('Favori kaldırılamadı', 'error');
     }
   };
 
@@ -133,8 +264,19 @@ export default function Settings() {
                 {t.settings.blockedUsers}
               </button>
               <button
-                onClick={() => setActiveTab('privacy')}
+                onClick={() => setActiveTab('favorites')}
                 className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+                  activeTab === 'favorites'
+                    ? 'text-purple-400 border-b-2 border-purple-400'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Star size={14} className="inline mr-1.5" />
+                {t.settings.favorites}
+              </button>
+              <button
+                onClick={() => setActiveTab('privacy')}
+                className={`flex-1 px-2 py-2 text-sm font-medium transition-colors ${
                   activeTab === 'privacy'
                     ? 'text-purple-400 border-b-2 border-purple-400'
                     : 'text-slate-400 hover:text-white'
@@ -145,7 +287,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => setActiveTab('notifications')}
-                className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex-1 px-2 py-2 text-sm font-medium transition-colors ${
                   activeTab === 'notifications'
                     ? 'text-purple-400 border-b-2 border-purple-400'
                     : 'text-slate-400 hover:text-white'
@@ -205,6 +347,61 @@ export default function Settings() {
                             className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm transition-colors"
                           >
                             {t.settings.unblock}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'favorites' && (
+                <div>
+                  <p className="text-slate-400 text-xs mb-3">
+                    {t.settings.favoritesDesc}
+                  </p>
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="animate-spin text-purple-400" size={24} />
+                    </div>
+                  ) : favoriteUsers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Star className="mx-auto mb-3 text-slate-600" size={40} />
+                      <p className="text-slate-400">{t.settings.noFavorites}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[calc(90vh-20rem)] overflow-y-auto">
+                      {favoriteUsers.map((favorite) => (
+                        <div
+                          key={favorite.id}
+                          className="flex items-center gap-3 p-2.5 bg-slate-950/30 rounded-lg"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center overflow-hidden">
+                            {favorite.favorite_user.avatar_url ? (
+                              <img
+                                src={favorite.favorite_user.avatar_url}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User size={20} className="text-white" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-white font-medium text-sm">
+                              {favorite.favorite_user.full_name}
+                            </p>
+                            {favorite.favorite_user.username && (
+                              <p className="text-slate-400 text-xs">
+                                @{favorite.favorite_user.username}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeFavorite(favorite.id, favorite.favorite_user.full_name)}
+                            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm transition-colors"
+                          >
+                            {t.settings.remove}
                           </button>
                         </div>
                       ))}

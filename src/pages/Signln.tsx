@@ -57,8 +57,13 @@ export default function SignIn() {
     }
   }, [t, isSignUp]);
 
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
   if (user) {
-    navigate('/');
     return null;
   }
 

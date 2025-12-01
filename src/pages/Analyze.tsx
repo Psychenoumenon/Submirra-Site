@@ -139,9 +139,13 @@ export default function Analyze() {
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto animate-fade-in-delay">
             <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-2xl p-5 md:p-8 relative hover:border-pink-500/30 transition-all duration-300 shadow-xl shadow-pink-500/5">
               <div className="absolute -top-3 right-4 md:right-6">
-                <span className="px-2 md:px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold rounded-full shadow-lg animate-pulse">
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="px-2 md:px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold rounded-full shadow-lg animate-pulse hover:from-purple-500 hover:to-pink-500 transition-all duration-300 hover:scale-105 cursor-pointer"
+                  title="Satın Al sayfasına git"
+                >
                   {t.analyze.trialBadge}
-                </span>
+                </button>
               </div>
 
               <div className="mb-5 md:mb-6">

@@ -49,6 +49,12 @@ CREATE TABLE IF NOT EXISTS profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email text NOT NULL,
   full_name text DEFAULT '',
+  username text UNIQUE,
+  trial_start timestamptz,
+  trial_end timestamptz,
+  trial_used boolean DEFAULT false,
+  avatar_url text,
+  bio text,
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );
@@ -61,6 +67,8 @@ CREATE TABLE IF NOT EXISTS dreams (
   analysis_text text DEFAULT '',
   image_url text DEFAULT '',
   status text DEFAULT 'pending' NOT NULL,
+  is_public boolean DEFAULT false,
+  likes_count integer DEFAULT 0,
   created_at timestamptz DEFAULT now() NOT NULL
 );
 

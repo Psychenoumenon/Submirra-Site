@@ -358,6 +358,18 @@ export default function Social() {
 
     try {
       setSearchingUsers(true);
+      
+      // Get blocked users first
+      let blockedUserIds: string[] = [];
+      if (user) {
+        const { data: blockedData } = await supabase
+          .from('user_blocks')
+          .select('blocked_id')
+          .eq('blocker_id', user.id);
+        
+        blockedUserIds = (blockedData || []).map(block => block.blocked_id);
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, username, avatar_url, bio')
@@ -366,7 +378,12 @@ export default function Social() {
 
       if (error) throw error;
 
-      setSearchUsers(data || []);
+      // Filter out blocked users and current user
+      const filteredUsers = (data || []).filter(userProfile => 
+        userProfile.id !== user?.id && !blockedUserIds.includes(userProfile.id)
+      );
+
+      setSearchUsers(filteredUsers);
     } catch (error) {
       console.error('Error searching users:', error);
     } finally {

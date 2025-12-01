@@ -6,8 +6,8 @@ DROP POLICY IF EXISTS "Users can delete their blocks" ON user_blocks;
 -- Create user_blocks table for blocking users
 CREATE TABLE IF NOT EXISTS user_blocks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  blocker_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  blocked_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  blocker_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  blocked_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   created_at timestamptz DEFAULT now() NOT NULL,
   UNIQUE(blocker_id, blocked_id)
 );

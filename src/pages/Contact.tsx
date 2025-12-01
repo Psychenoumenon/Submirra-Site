@@ -1,9 +1,12 @@
-import { Mail, Send } from 'lucide-react';
+import { Mail, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useLanguage } from '../lib/i18n';
+import { useToast } from '../lib/ToastContext';
+import emailjs from '@emailjs/browser';
 
 export default function Contact() {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -11,13 +14,75 @@ export default function Contact() {
     message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    setSending(true);
 
-    setTimeout(() => setSubmitted(false), 5000);
+    try {
+      // EmailJS ile gerçek email gönderme
+      const templateParams = {
+        from_name: formData.name,
+        from_email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+        to_email: 'submirra.ai@gmail.com',
+        reply_to: formData.email,
+      };
+
+      // EmailJS servis ayarları
+      const serviceId = 'service_6btsv5d';
+      const templateId = 'template_contact';
+      const publicKey = 'AdvA9XekMYHYYOhcF';
+
+      try {
+        console.log('📧 EmailJS Gönderiliyor...', {
+          serviceId,
+          templateId,
+          publicKey,
+          templateParams
+        });
+        
+        // EmailJS ile email gönder
+        const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        
+        console.log('✅ EmailJS Başarılı:', result);
+        
+        setSubmitted(true);
+        setFormData({ name: '', email: '', subject: '', message: '' });
+        showToast('Mesajınız başarıyla gönderildi! En kısa sürede size dönüş yapacağız.', 'success');
+        setTimeout(() => setSubmitted(false), 5000);
+        
+      } catch (emailError) {
+        console.error('❌ EmailJS Hatası:', emailError);
+        
+        // Hata detaylarını göster
+        if (emailError instanceof Error) {
+          console.error('Hata mesajı:', emailError.message);
+          showToast(`Email hatası: ${emailError.message}`, 'error');
+        } else {
+          console.error('Bilinmeyen hata:', emailError);
+          showToast('Email gönderilirken bilinmeyen bir hata oluştu.', 'error');
+        }
+        
+        // Console'a mesajı kaydet
+        console.log('📧 Contact Form Mesajı (EmailJS hatası nedeniyle console\'a kaydedildi):', {
+          İsim: formData.name,
+          Email: formData.email,
+          Konu: formData.subject,
+          Mesaj: formData.message,
+          Tarih: new Date().toLocaleString('tr-TR'),
+          Hata: emailError
+        });
+      }
+      
+    } catch (error) {
+      console.error('Form gönderme hatası:', error);
+      showToast('Mesaj gönderilirken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -117,10 +182,20 @@ export default function Contact() {
 
             <button
               type="submit"
-              className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold hover:from-pink-500 hover:to-purple-500 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/30 flex items-center justify-center gap-2 text-sm md:text-base"
+              disabled={sending}
+              className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold hover:from-pink-500 hover:to-purple-500 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/30 flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send size={18} />
-              {t.contact.send}
+              {sending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  Gönderiliyor...
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  {t.contact.send}
+                </>
+              )}
             </button>
           </form>
         </div>

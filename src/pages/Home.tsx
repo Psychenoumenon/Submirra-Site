@@ -1,4 +1,4 @@
-import { Sparkles, Brain, Image as ImageIcon, ArrowRight } from 'lucide-react';
+import { Sparkles, Brain, Image as ImageIcon, ArrowRight, Zap, BookOpen, TrendingUp, Eye, Palette, Database } from 'lucide-react';
 import { useNavigate } from '../components/Router';
 import { useAuth } from '../lib/AuthContext';
 import { useLanguage } from '../lib/i18n';
@@ -48,42 +48,83 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mt-12 md:mt-24 max-w-5xl mx-auto">
-            <div className="group bg-slate-900/70 backdrop-blur-sm border-2 border-pink-500/30 rounded-2xl p-6 md:p-8 hover:border-pink-500/60 hover:shadow-lg hover:shadow-pink-500/20 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Deep Analysis */}
+            <div className="group bg-slate-900/70 backdrop-blur-sm border-2 border-pink-500/30 rounded-2xl p-6 hover:border-pink-500/60 hover:shadow-xl hover:shadow-pink-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <div className="relative z-10">
-                <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full bg-gradient-to-br from-pink-500/30 to-pink-600/20 flex items-center justify-center border-2 border-pink-500/40 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-pink-500/30">
-                  <Brain className="w-8 h-8 md:w-10 md:h-10 text-pink-400" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-500/30 to-pink-600/20 flex items-center justify-center border-2 border-pink-500/40 transition-all duration-500 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-pink-500/40 group-hover:border-pink-400/60">
+                  <Brain className="w-8 h-8 text-pink-400 group-hover:text-pink-300 transition-colors" />
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">{t.home.feature1Title}</h3>
-                <p className="text-sm md:text-base text-slate-300 leading-relaxed">
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-pink-100 transition-colors">{t.home.feature1Title}</h3>
+                <p className="text-sm text-slate-300 leading-relaxed mb-4 group-hover:text-slate-200 transition-colors">
                   {t.home.feature1Desc}
                 </p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {t.home.feature1Details.split(' • ').map((detail, index) => (
+                    <div key={index} className="px-3 py-2 bg-pink-500/20 text-pink-300 text-xs font-medium rounded-lg border border-pink-500/30 group-hover:bg-pink-500/30 group-hover:border-pink-400/50 transition-all text-center">
+                      {detail}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <Zap className="w-4 h-4 text-pink-400" />
+                  <Eye className="w-4 h-4 text-pink-400" />
+                  <TrendingUp className="w-4 h-4 text-pink-400" />
+                </div>
               </div>
             </div>
 
-            <div className="group bg-slate-900/70 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-6 md:p-8 hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Visual Generation */}
+
+            <div className="group bg-slate-900/70 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 hover:shadow-xl hover:shadow-purple-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <div className="relative z-10">
-                <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full bg-gradient-to-br from-purple-500/30 to-purple-600/20 flex items-center justify-center border-2 border-purple-500/40 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-purple-500/30">
-                  <ImageIcon className="w-8 h-8 md:w-10 md:h-10 text-purple-400" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/30 to-purple-600/20 flex items-center justify-center border-2 border-purple-500/40 transition-all duration-500 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-purple-500/40 group-hover:border-purple-400/60">
+                  <ImageIcon className="w-8 h-8 text-purple-400 group-hover:text-purple-300 transition-colors" />
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">{t.home.feature2Title}</h3>
-                <p className="text-sm md:text-base text-slate-300 leading-relaxed">
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-purple-100 transition-colors">{t.home.feature2Title}</h3>
+                <p className="text-sm text-slate-300 leading-relaxed mb-4 group-hover:text-slate-200 transition-colors">
                   {t.home.feature2Desc}
                 </p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {t.home.feature2Details.split(' • ').map((detail, index) => (
+                    <div key={index} className="px-3 py-2 bg-purple-500/20 text-purple-300 text-xs font-medium rounded-lg border border-purple-500/30 group-hover:bg-purple-500/30 group-hover:border-purple-400/50 transition-all text-center">
+                      {detail}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <Palette className="w-4 h-4 text-purple-400" />
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <ImageIcon className="w-4 h-4 text-purple-400" />
+                </div>
               </div>
             </div>
 
-            <div className="group bg-slate-900/70 backdrop-blur-sm border-2 border-cyan-500/30 rounded-2xl p-6 md:p-8 hover:border-cyan-500/60 hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Personal Library */}
+
+            <div className="group bg-slate-900/70 backdrop-blur-sm border-2 border-cyan-500/30 rounded-2xl p-6 hover:border-cyan-500/60 hover:shadow-xl hover:shadow-cyan-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <div className="relative z-10">
-                <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full bg-gradient-to-br from-cyan-500/30 to-cyan-600/20 flex items-center justify-center border-2 border-cyan-500/40 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-cyan-500/30">
-                  <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-cyan-400" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-cyan-500/30 to-cyan-600/20 flex items-center justify-center border-2 border-cyan-500/40 transition-all duration-500 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-cyan-500/40 group-hover:border-cyan-400/60">
+                  <BookOpen className="w-8 h-8 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">{t.home.feature3Title}</h3>
-                <p className="text-sm md:text-base text-slate-300 leading-relaxed">
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-cyan-100 transition-colors">{t.home.feature3Title}</h3>
+                <p className="text-sm text-slate-300 leading-relaxed mb-4 group-hover:text-slate-200 transition-colors">
                   {t.home.feature3Desc}
                 </p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {t.home.feature3Details.split(' • ').map((detail, index) => (
+                    <div key={index} className="px-3 py-2 bg-cyan-500/20 text-cyan-300 text-xs font-medium rounded-lg border border-cyan-500/30 group-hover:bg-cyan-500/30 group-hover:border-cyan-400/50 transition-all text-center">
+                      {detail}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <Database className="w-4 h-4 text-cyan-400" />
+                  <TrendingUp className="w-4 h-4 text-cyan-400" />
+                  <BookOpen className="w-4 h-4 text-cyan-400" />
+                </div>
               </div>
             </div>
           </div>

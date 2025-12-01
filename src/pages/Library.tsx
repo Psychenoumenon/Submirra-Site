@@ -243,7 +243,7 @@ export default function Library() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search your dreams..."
+                placeholder={t.library.searchPlaceholder}
                 className="w-full pl-10 pr-4 py-3 bg-slate-900/50 backdrop-blur-sm border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-lg"
               />
             </div>
@@ -307,7 +307,7 @@ export default function Library() {
         ) : filteredDreams.length === 0 ? (
           <div className="text-center py-20">
             <Search className="mx-auto mb-4 text-slate-600" size={64} />
-            <p className="text-slate-400 text-lg mb-6">No dreams found matching your search</p>
+            <p className="text-slate-400 text-lg mb-6">{t.library.noDreamsFound}</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

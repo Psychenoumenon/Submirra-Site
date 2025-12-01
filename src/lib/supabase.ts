@@ -1,35 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  // Silent warning - don't expose configuration details
-  if (import.meta.env.DEV) {
-    console.error('🚨 SUPABASE YAPILANDIRMASI EKSİK!');
-    console.error('❌ VITE_SUPABASE_URL:', supabaseUrl ? '✅ Var' : '❌ Eksik');
-    console.error('❌ VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Var' : '❌ Eksik');
-    console.error('📝 Çözüm: Proje kök dizininde .env dosyası oluşturun:');
-    console.error(`
-VITE_SUPABASE_URL=your-project-url-here
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
-    `);
-  }
-}
+// Direct Supabase configuration
+const supabaseUrl = 'https://soewlqmskqmpycaevhoc.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvZXdscW1za3FtcHljYWV2aG9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDExODksImV4cCI6MjA3ODYxNzE4OX0.0CAOUF-SVUIx5udgzNBkrggovWaafHWYFN1j-HzYTFU';
 
 // Create Supabase client
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key',
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  }
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
 export type Database = {
   public: {

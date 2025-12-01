@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles } from 'lucide-react';
+import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles, MoreVertical, Ban, Star, StarOff, Flag } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate, useCurrentPage } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -57,6 +57,10 @@ export default function Profile() {
   const [followersList, setFollowersList] = useState<Array<{id: string; full_name: string; username: string | null; avatar_url: string | null}>>([]);
   const [followingList, setFollowingList] = useState<Array<{id: string; full_name: string; username: string | null; avatar_url: string | null}>>([]);
   const [loadingFollows, setLoadingFollows] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlockedBy, setIsBlockedBy] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -78,6 +82,8 @@ export default function Profile() {
       loadPublicDreams(userId);
       if (user) {
         checkFollowingStatus(userId);
+        checkBlockStatus(userId);
+        checkFavoriteStatus(userId);
       }
     } else {
       // Viewing own profile
@@ -266,6 +272,238 @@ export default function Profile() {
       setIsFollowing(!!data && !error);
     } catch (error) {
       setIsFollowing(false);
+    }
+  };
+
+  const checkBlockStatus = async (targetUserId: string) => {
+    if (!user) return;
+
+    try {
+      // Check if current user blocked the target user
+      const { data: blockedData, error: blockedError } = await supabase
+        .from('user_blocks')
+        .select('id')
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', targetUserId)
+        .single();
+
+      if (blockedError && blockedError.code !== 'PGRST116') {
+        console.error('Error checking block status:', blockedError);
+      }
+
+      setIsBlocked(!!blockedData);
+
+      // Check if target user blocked the current user
+      const { data: blockedByData, error: blockedByError } = await supabase
+        .from('user_blocks')
+        .select('id')
+        .eq('blocker_id', targetUserId)
+        .eq('blocked_id', user.id)
+        .single();
+
+      if (blockedByError && blockedByError.code !== 'PGRST116') {
+        console.error('Error checking blocked by status:', blockedByError);
+      }
+
+      setIsBlockedBy(!!blockedByData);
+    } catch (error) {
+      console.error('Error checking block status:', error);
+    }
+  };
+
+  const checkFavoriteStatus = async (targetUserId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('favorite_user_id', targetUserId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking favorite status:', error);
+      }
+
+      setIsFavorite(!!data);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!user || !profileUserId) return;
+
+    if (!confirm('Bu kullanıcıyı engellemek istediğinizden emin misiniz?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_blocks')
+        .insert({
+          blocker_id: user.id,
+          blocked_id: profileUserId,
+        });
+
+      if (error) throw error;
+
+      setIsBlocked(true);
+      setShowProfileMenu(false);
+      showToast('Kullanıcı engellendi', 'success');
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      showToast('Kullanıcı engellenemedi', 'error');
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!user || !profileUserId) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_blocks')
+        .delete()
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', profileUserId);
+
+      if (error) throw error;
+
+      setIsBlocked(false);
+      setShowProfileMenu(false);
+      showToast('Kullanıcının engeli kaldırıldı', 'success');
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      showToast('Engel kaldırılamadı', 'error');
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user || !profileUserId) {
+      console.log('Missing user or profileUserId:', { user: !!user, profileUserId });
+      return;
+    }
+
+    console.log('Toggling favorite for:', profileUserId, 'Current status:', isFavorite);
+
+    try {
+      if (isFavorite) {
+        // Remove from favorites
+        console.log('Removing from favorites...');
+        const { error } = await supabase
+          .from('user_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('favorite_user_id', profileUserId);
+
+        if (error) {
+          console.error('Error removing favorite:', error);
+          throw error;
+        }
+
+        setIsFavorite(false);
+        showToast('Favori arkadaşlardan çıkarıldı', 'success');
+        console.log('Successfully removed from favorites');
+      } else {
+        // Add to favorites
+        console.log('Adding to favorites...');
+        const { data, error } = await supabase
+          .from('user_favorites')
+          .insert({
+            user_id: user.id,
+            favorite_user_id: profileUserId,
+          })
+          .select();
+
+        if (error) {
+          console.error('Error adding favorite:', error);
+          throw error;
+        }
+
+        console.log('Successfully added to favorites:', data);
+        setIsFavorite(true);
+        showToast('Favori arkadaşlara eklendi', 'success');
+      }
+      setShowProfileMenu(false);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      showToast(`İşlem başarısız: ${error.message}`, 'error');
+    }
+  };
+
+  const handleReportUser = async () => {
+    if (!user || !profileUserId) return;
+
+    const reason = prompt('Şikayet sebebinizi yazın (isteğe bağlı):');
+    if (reason === null) return; // User cancelled
+
+    if (!confirm('Bu kullanıcıyı şikayet etmek istediğinizden emin misiniz?')) {
+      return;
+    }
+
+    try {
+      console.log('Reporting user:', profileUserId);
+      
+      // Check if user already reported this person
+      const { data: existingReport } = await supabase
+        .from('user_reports')
+        .select('id')
+        .eq('reporter_id', user.id)
+        .eq('reported_user_id', profileUserId)
+        .single();
+
+      if (existingReport) {
+        showToast('Bu kullanıcıyı zaten şikayet etmişsiniz', 'error');
+        setShowProfileMenu(false);
+        return;
+      }
+
+      // Add report
+      const { error: reportError } = await supabase
+        .from('user_reports')
+        .insert({
+          reporter_id: user.id,
+          reported_user_id: profileUserId,
+          reason: reason || null,
+        });
+
+      if (reportError) throw reportError;
+
+      // Check total reports for this user
+      const { data: reports, error: countError } = await supabase
+        .from('user_reports')
+        .select('id')
+        .eq('reported_user_id', profileUserId);
+
+      if (countError) throw countError;
+
+      const reportCount = reports?.length || 0;
+      console.log('Total reports for user:', reportCount);
+
+      // If 10 or more reports, suspend the user
+      if (reportCount >= 10) {
+        const { error: suspendError } = await supabase
+          .from('profiles')
+          .update({ 
+            is_suspended: true,
+            suspended_at: new Date().toISOString(),
+            suspension_reason: 'Çok sayıda şikayet nedeniyle otomatik askıya alındı'
+          })
+          .eq('id', profileUserId);
+
+        if (suspendError) {
+          console.error('Error suspending user:', suspendError);
+        } else {
+          console.log('User suspended due to reports');
+        }
+      }
+
+      setShowProfileMenu(false);
+      showToast('Şikayet gönderildi', 'success');
+    } catch (error) {
+      console.error('Error reporting user:', error);
+      showToast('Şikayet gönderilemedi', 'error');
     }
   };
 
@@ -485,19 +723,8 @@ export default function Profile() {
     try {
       setUploadingAvatar(true);
 
-      // First, check if bucket exists by trying to list it
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-      if (bucketError) {
-        console.error('Error checking buckets:', bucketError);
-        throw new Error('Cannot access storage. Please check your Supabase configuration.');
-      }
-
-      const avatarsBucket = buckets?.find(b => b.name === 'avatars');
-      if (!avatarsBucket) {
-        throw new Error('Avatars bucket not found. Please create "avatars" bucket in Supabase Storage (make it public).');
-      }
-
-      console.log('Avatars bucket found:', avatarsBucket);
+      // Skip bucket check for now - assume it exists
+      console.log('Skipping bucket check, proceeding with upload...');
 
       // Delete old avatar if exists (try to delete, but don't fail if it doesn't exist)
       if (profile?.avatar_url) {
@@ -638,6 +865,63 @@ export default function Profile() {
     );
   }
 
+  // Show blocked user message if user is blocked
+  if (isBlocked && !isOwnProfile) {
+    return (
+      <div className="min-h-screen relative pt-24 pb-16 px-4 md:px-6">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-40 right-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-40 left-10 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative max-w-4xl mx-auto z-10">
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+              <User className="text-red-400" size={40} />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-4">Engellediğiniz Kullanıcı</h2>
+            <p className="text-slate-400 mb-6">
+              Bu kullanıcıyı engellemişsiniz. Profilini görüntüleyemezsiniz.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => navigate('/social')}
+                className="px-6 py-3 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+              >
+                Geri Dön
+              </button>
+              <button
+                onClick={async () => {
+                  if (!user || !profileUserId) return;
+                  try {
+                    const { error } = await supabase
+                      .from('user_blocks')
+                      .delete()
+                      .eq('blocker_id', user.id)
+                      .eq('blocked_id', profileUserId);
+                    
+                    if (error) throw error;
+                    
+                    setIsBlocked(false);
+                    showToast('Kullanıcının engeli kaldırıldı', 'success');
+                    // Reload the page to show normal profile
+                    window.location.reload();
+                  } catch (error) {
+                    console.error('Error unblocking user:', error);
+                    showToast('Engel kaldırılamadı', 'error');
+                  }
+                }}
+                className="px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-500 hover:to-purple-500 transition-all"
+              >
+                Engeli Kaldır
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen relative pt-24 pb-16 px-4 md:px-6">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -655,7 +939,72 @@ export default function Profile() {
           </p>
         </div>
 
-        <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-8">
+        <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-8 relative">
+          {/* Profile Menu - Top Right Corner */}
+          {!isOwnProfile && user && (
+            <div className="absolute top-4 right-4 z-10">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-200"
+              >
+                <MoreVertical size={16} />
+              </button>
+              
+              {showProfileMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowProfileMenu(false)}
+                  />
+                  <div className="absolute right-0 top-10 w-48 bg-slate-900 border border-purple-500/30 rounded-lg shadow-2xl z-50 overflow-hidden">
+                    <button
+                      onClick={handleToggleFavorite}
+                      className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-white text-sm"
+                    >
+                      {isFavorite ? (
+                        <>
+                          <StarOff size={16} className="text-yellow-400" />
+                          <span>Favorilerden Çıkar</span>
+                        </>
+                      ) : (
+                        <>
+                          <Star size={16} className="text-yellow-400" />
+                          <span>Favorilere Ekle</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    {isBlocked ? (
+                      <button
+                        onClick={handleUnblockUser}
+                        className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-green-400 text-sm"
+                      >
+                        <Ban size={16} />
+                        <span>Engeli Kaldır</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleBlockUser}
+                        className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-red-400 text-sm"
+                      >
+                        <Ban size={16} />
+                        <span>Kullanıcıyı Engelle</span>
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={handleReportUser}
+                      className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-orange-400 text-sm border-t border-slate-700/50"
+                    >
+                      <Flag size={16} />
+                      <span>Şikayet Et</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          
           <div className="space-y-6">
             {/* Profile Picture Section */}
             <div className="flex items-center gap-6 pb-6 border-b border-purple-500/20">
@@ -664,13 +1013,13 @@ export default function Profile() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingAvatar}
-                    className="relative w-24 h-24 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden cursor-pointer disabled:cursor-not-allowed transition-all hover:border-pink-500/50"
+                    className="relative w-32 h-32 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border-2 border-pink-500/40 flex items-center justify-center overflow-hidden cursor-pointer disabled:cursor-not-allowed transition-all hover:border-pink-500/60 hover:scale-105 shadow-lg"
                   >
                     {profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
                         alt="Profile"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
                       <User className="text-pink-400" size={40} />
@@ -684,12 +1033,12 @@ export default function Profile() {
                     </div>
                   </button>
                 ) : (
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border-2 border-pink-500/40 flex items-center justify-center overflow-hidden shadow-lg">
                     {profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
                         alt="Profile"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
                       <User className="text-pink-400" size={40} />
@@ -849,7 +1198,11 @@ export default function Profile() {
                 <>
                   {isOwnProfile ? (
                     <button
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => {
+                        setEditedName(profile?.full_name || '');
+                        setEditedBio(profile?.bio || '');
+                        setIsEditing(true);
+                      }}
                       className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 transition-all duration-300"
                     >
                       <Edit2 size={18} />
@@ -882,7 +1235,7 @@ export default function Profile() {
                         className="flex items-center gap-2 px-6 py-3 rounded-lg bg-slate-800 text-white hover:bg-slate-700 border border-slate-700 transition-all duration-300"
                       >
                         <MessageCircle size={18} />
-                        Message
+                        {t.profile.message}
                       </button>
                     </div>
                   )}

@@ -15,6 +15,7 @@ interface Translations {
     freeTrial: string;
     signIn: string;
     signOut: string;
+    messages: string;
   };
     home: {
       title: string;
@@ -148,6 +149,7 @@ interface Translations {
     unfollowSuccess: string;
     followFailed: string;
     bioPlaceholder: string;
+    message: string;
   };
   dashboard: {
     title: string;
@@ -228,6 +230,21 @@ interface Translations {
     comments: string;
     newFollowers: string;
     directMessages: string;
+    favorites: string;
+    favoritesDesc: string;
+    noFavorites: string;
+    remove: string;
+  };
+  messages: {
+    title: string;
+    searchPlaceholder: string;
+    noMessages: string;
+    searchToStart: string;
+    typePlaceholder: string;
+    loading: string;
+    loadingUser: string;
+    searchResults: string;
+    searching: string;
   };
   pricing: {
     title: string;
@@ -313,6 +330,7 @@ const translations: Record<Language, Translations> = {
       freeTrial: '3-Day Free Trial',
       signIn: 'Sign In',
       signOut: 'Sign Out',
+      messages: 'Messages',
     },
     home: {
       title: 'Submirra',
@@ -322,11 +340,14 @@ const translations: Record<Language, Translations> = {
       getStarted: 'Get Started',
       learnMore: 'Learn More',
       feature1Title: 'Deep Analysis',
-      feature1Desc: 'Advanced analysis techniques reveal hidden meanings in your dreams through sophisticated subconscious interpretation.',
+      feature1Desc: 'Advanced AI-powered analysis techniques reveal hidden meanings in your dreams through sophisticated subconscious interpretation. Our neural networks decode symbolic patterns, emotional undertones, and psychological connections.',
+      feature1Details: 'AI Analysis • Symbols • Emotions • Patterns',
       feature2Title: 'Visual Generation',
-      feature2Desc: 'Transform your dreams into stunning surreal visualizations that capture their essence and emotion.',
+      feature2Desc: 'Transform your dreams into stunning surreal visualizations that capture their essence and emotion. Our advanced AI creates personalized artwork that brings your subconscious visions to life.',
+      feature2Details: 'Surreal Art • Color Mapping • Symbolic Visual • HD Output',
       feature3Title: 'Personal Library',
-      feature3Desc: 'Build your personal dream journal with all your analyses and visualizations in one place.',
+      feature3Desc: 'Build your personal dream journal with all your analyses and visualizations in one place. Track patterns, explore recurring themes, and discover your subconscious evolution over time.',
+      feature3Details: 'Dream Journal • Pattern Track • Theme Analysis • Progress',
     },
     about: {
       title: 'About Submirra',
@@ -373,6 +394,8 @@ const translations: Record<Language, Translations> = {
       analysis: 'Analysis',
       pending: 'Pending Analysis',
       processingMessage: 'Analysis is being processed',
+      searchPlaceholder: 'Search your dreams...',
+      noDreamsFound: 'No dreams found matching your search',
     },
     social: {
       title: 'Social Feed',
@@ -446,6 +469,7 @@ const translations: Record<Language, Translations> = {
       unfollowSuccess: 'Unfollowed this user',
       followFailed: 'Failed to update follow status',
       bioPlaceholder: 'Write a bio...',
+      message: 'Message',
     },
     dashboard: {
       title: 'Dashboard',
@@ -526,6 +550,21 @@ const translations: Record<Language, Translations> = {
       comments: 'Comments',
       newFollowers: 'New Followers',
       directMessages: 'Direct Messages',
+      favorites: 'Favorites',
+      favoritesDesc: 'Your favorite friends. Their dreams will be shown with priority.',
+      noFavorites: 'No favorite friends yet',
+      remove: 'Remove',
+    },
+    messages: {
+      title: 'Messages',
+      searchPlaceholder: 'Search users...',
+      noMessages: 'No messages yet',
+      searchToStart: 'Search for users to start chatting',
+      typePlaceholder: 'Type a message...',
+      loading: 'Loading...',
+      loadingUser: 'Loading user...',
+      searchResults: 'Search Results',
+      searching: 'Searching...',
     },
     pricing: {
       title: 'Simple, Transparent Pricing',
@@ -604,11 +643,12 @@ const translations: Record<Language, Translations> = {
       analyze: 'Analiz Et',
       library: 'Kütüphane',
       contact: 'İletişim',
-      dashboard: 'Dashboard',
+      dashboard: 'Kontrol Paneli',
       buy: 'Satın Al',
       freeTrial: '3 Günlük Deneme',
       signIn: 'Giriş Yap',
       signOut: 'Çıkış Yap',
+      messages: 'Mesajlar',
     },
     home: {
       title: 'Submirra',
@@ -618,11 +658,14 @@ const translations: Record<Language, Translations> = {
       getStarted: 'Başlayın',
       learnMore: 'Daha Fazla Bilgi',
       feature1Title: 'Derin Analiz',
-      feature1Desc: 'Gelişmiş analiz teknikleri, sofistike bilinçaltı yorumlama yoluyla rüyalarınızdaki gizli anlamları ortaya çıkarır.',
+      feature1Desc: 'Gelişmiş AI destekli analiz teknikleri, sofistike bilinçaltı yorumlama yoluyla rüyalarınızdaki gizli anlamları ortaya çıkarır. Sinir ağlarımız sembolik kalıpları, duygusal tonları ve psikolojik bağlantıları çözer.',
+      feature1Details: 'AI Analiz • Semboller • Duygular • Kalıplar',
       feature2Title: 'Görsel Üretimi',
-      feature2Desc: 'Rüyalarınızı, özünü ve duygusunu yakalayan muhteşem sürreal görselleştirmelere dönüştürün.',
+      feature2Desc: 'Rüyalarınızı, özünü ve duygusunu yakalayan muhteşem sürreal görselleştirmelere dönüştürün. Gelişmiş AI\'mız bilinçaltı vizyonlarınızı hayata geçiren kişiselleştirilmiş sanat eserleri yaratır.',
+      feature2Details: 'Sürreal Sanat • Renk Haritası • Sembolik Görsel • HD Çıktı',
       feature3Title: 'Kişisel Kütüphane',
-      feature3Desc: 'Tüm analizleriniz ve görselleştirmelerinizle kişisel rüya günlüğünüzü tek bir yerde oluşturun.',
+      feature3Desc: 'Tüm analizleriniz ve görselleştirmelerinizle kişisel rüya günlüğünüzü tek bir yerde oluşturun. Kalıpları takip edin, tekrarlayan temaları keşfedin ve zaman içinde bilinçaltı evrimimizi keşfedin.',
+      feature3Details: 'Rüya Günlüğü • Kalıp Takip • Tema Analiz • İlerleme',
     },
     about: {
       title: 'Submirra Hakkında',
@@ -669,6 +712,8 @@ const translations: Record<Language, Translations> = {
       analysis: 'Analiz',
       pending: 'Analiz Bekleniyor',
       processingMessage: 'Analiz işleniyor',
+      searchPlaceholder: 'Rüyalarınızda arayın...',
+      noDreamsFound: 'Aramanızla eşleşen rüya bulunamadı',
     },
     social: {
       title: 'Sosyal Akış',
@@ -742,9 +787,10 @@ const translations: Record<Language, Translations> = {
       unfollowSuccess: 'Bu kullanıcıyı takipten çıktınız',
       followFailed: 'Takip durumu güncellenemedi',
       bioPlaceholder: 'Bir biyografi yazın...',
+      message: 'Mesaj',
     },
     dashboard: {
-      title: 'Dashboard',
+      title: 'Kontrol Paneli',
       subtitle: 'Rüya analizi yolculuğunuzun genel bakışı',
       totalDreams: 'Toplam Rüya',
       completedAnalyses: 'Tamamlanan Analizler',
@@ -822,6 +868,21 @@ const translations: Record<Language, Translations> = {
       comments: 'Yorumlar',
       newFollowers: 'Yeni Takipçiler',
       directMessages: 'Doğrudan Mesajlar',
+      favorites: 'Favoriler',
+      favoritesDesc: 'Favori arkadaşlarınız. Bu kullanıcıların rüyaları öncelikli olarak gösterilir.',
+      noFavorites: 'Henüz favori arkadaşınız yok',
+      remove: 'Çıkar',
+    },
+    messages: {
+      title: 'Mesajlar',
+      searchPlaceholder: 'Kullanıcı ara...',
+      noMessages: 'Henüz mesaj yok',
+      searchToStart: 'Sohbet başlatmak için kullanıcı arayın',
+      typePlaceholder: 'Mesaj yazın...',
+      loading: 'Yükleniyor...',
+      loadingUser: 'Kullanıcı yükleniyor...',
+      searchResults: 'Arama Sonuçları',
+      searching: 'Aranıyor...',
     },
     pricing: {
       title: 'Basit ve Şeffaf Fiyatlandırma',
