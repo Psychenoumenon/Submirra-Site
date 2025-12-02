@@ -90,6 +90,38 @@ export default function Messages() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Message deleted (received):', payload);
+          loadConversations();
+          if (selectedConversation) {
+            loadMessages(selectedConversation);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Message deleted (sent):', payload);
+          loadConversations();
+          if (selectedConversation) {
+            loadMessages(selectedConversation);
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -338,6 +370,8 @@ export default function Messages() {
     }
 
     try {
+      const conversationToDelete = selectedConversation;
+      
       // Delete all messages between these two users
       const { error } = await supabase
         .from('messages')
@@ -348,8 +382,13 @@ export default function Messages() {
 
       setSelectedConversation(null);
       setMessages([]);
-      loadConversations();
       setShowMenu(false);
+      
+      // Immediately remove the conversation from the local state
+      setConversations(prev => prev.filter(conv => conv.user_id !== conversationToDelete));
+      
+      // Also reload conversations to ensure consistency
+      loadConversations();
     } catch (error) {
       console.error('Error deleting conversation:', error);
     }
@@ -373,6 +412,10 @@ export default function Messages() {
         setMessages([]);
       }
 
+      // Immediately remove the conversation from the local state
+      setConversations(prev => prev.filter(conv => conv.user_id !== userId));
+
+      // Also reload conversations to ensure consistency
       loadConversations();
     } catch (error) {
       console.error('Error deleting conversation:', error);

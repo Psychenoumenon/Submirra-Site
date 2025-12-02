@@ -58,3 +58,4 @@ CREATE TRIGGER trigger_check_user_suspension
   AFTER INSERT ON user_reports
   FOR EACH ROW
   EXECUTE FUNCTION check_user_suspension();
+

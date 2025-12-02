@@ -49,10 +49,10 @@ export default function Contact() {
         
         console.log('✅ EmailJS Başarılı:', result);
         
-        setSubmitted(true);
-        setFormData({ name: '', email: '', subject: '', message: '' });
+    setSubmitted(true);
+    setFormData({ name: '', email: '', subject: '', message: '' });
         showToast('Mesajınız başarıyla gönderildi! En kısa sürede size dönüş yapacağız.', 'success');
-        setTimeout(() => setSubmitted(false), 5000);
+    setTimeout(() => setSubmitted(false), 5000);
         
       } catch (emailError) {
         console.error('❌ EmailJS Hatası:', emailError);
@@ -192,8 +192,8 @@ export default function Contact() {
                 </>
               ) : (
                 <>
-                  <Send size={18} />
-                  {t.contact.send}
+              <Send size={18} />
+              {t.contact.send}
                 </>
               )}
             </button>

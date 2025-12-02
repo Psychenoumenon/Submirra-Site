@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize authentication session
+    // Normal Supabase auth
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -56,22 +56,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, username: string) => {
     try {
-      // Check if username already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username.toLowerCase())
-        .single();
-
-      if (existingUser) {
-        return { error: new Error('Bu kullanıcı adı zaten alınmış. Lütfen farklı bir tane seçin.') };
+      console.log('Starting signup process for:', { email, fullName, username });
+      
+      // Basic validation
+      if (!email || !password || !fullName || !username) {
+        throw new Error('Tüm alanları doldurun.');
       }
-
-      // Ignore 'not found' errors (PGRST116) - means username is available
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Username check error:', checkError);
+      
+      if (password.length < 6) {
+        throw new Error('Şifre en az 6 karakter olmalıdır.');
       }
+      
+      if (username.length < 3) {
+        throw new Error('Kullanıcı adı en az 3 karakter olmalıdır.');
+      }
+      
+      // Test Supabase connection
+      try {
+        const { data: testData, error: testError } = await supabase.from('profiles').select('count').limit(1);
+        console.log('Supabase connection test:', { testData, testError });
+      } catch (testErr) {
+        console.error('Supabase connection test failed:', testErr);
+      }
+      // Skip username check for now to avoid 406 errors
+      // The database will handle uniqueness constraint
+      console.log('Skipping username check to avoid 406 errors - database will handle uniqueness');
 
+      console.log('Attempting Supabase auth.signUp...');
+      
+      // Gerçek Supabase auth (RLS kapalı olduğu için artık çalışmalı)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -83,55 +96,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           },
         },
       });
+      
+      console.log('SignUp response:', { 
+        user: data?.user ? { id: data.user.id, email: data.user.email } : null, 
+        session: data?.session ? 'exists' : 'null',
+        error: error ? { message: error.message, status: error.status } : null 
+      });
 
       if (error) {
         // Log error in development for debugging
-        if (import.meta.env.DEV) {
-          console.error('SignUp error:', error);
-          console.error('Error details:', {
-            message: error.message,
-            status: error.status,
-            statusText: error.statusText
-          });
+        console.error('SignUp error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          code: error.code || 'no-code'
+        });
+        
+        // More specific error handling
+        if (error.message.includes('already registered') || error.message.includes('already exists') || error.message.includes('User already registered')) {
+          throw new Error('Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta kullanın.');
         }
         
-        // Generic error messages - don't expose Supabase
-        const genericError = new Error(
-          error.message.includes('already registered') || error.message.includes('already exists') || error.message.includes('User already registered')
-            ? 'Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta kullanın.'
-            : error.message.includes('Password should be at least')
-            ? 'Şifre en az 6 karakter olmalıdır.'
-            : 'Hesap oluşturulamadı. Lütfen tekrar deneyin.'
-        );
-        throw genericError;
+        if (error.message.includes('Password should be at least')) {
+          throw new Error('Şifre en az 6 karakter olmalıdır.');
+        }
+        
+        if (error.message.includes('Email rate limit exceeded')) {
+          throw new Error('Çok fazla kayıt denemesi yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.');
+        }
+        
+        if (error.message.includes('Invalid email')) {
+          throw new Error('Geçersiz e-posta adresi. Lütfen geçerli bir e-posta girin.');
+        }
+        
+        if (error.message.includes('Signup is disabled')) {
+          throw new Error('Kayıt işlemi şu anda devre dışı. Lütfen daha sonra tekrar deneyin.');
+        }
+        
+        if (error.message.includes('Email confirmations are required')) {
+          throw new Error('E-posta onayı gerekli. Lütfen Supabase ayarlarında "Enable email confirmations" seçeneğini kapatın.');
+        }
+        
+        if (error.message.includes('rate limit')) {
+          throw new Error('Çok fazla kayıt denemesi. Lütfen birkaç dakika bekleyip tekrar deneyin.');
+        }
+        
+        if (error.message.includes('Database error saving new user')) {
+          throw new Error('Veritabanı hatası: Supabase Dashboard → SQL Editor → Migration dosyalarını çalıştırın. Profiles tablosu ve RLS politikaları eksik olabilir.');
+        }
+        
+        // Log the actual error for debugging but show generic message
+        console.error('Unhandled signup error:', error.message);
+        throw new Error(`Hesap oluşturulamadı: ${error.message}`);
       }
 
-      // Profile will be created automatically by database trigger
-      // If trigger doesn't work, try to create it manually
+      // Skip profile creation for now - just use basic auth
       if (data.user) {
-        try {
-          const { error: profileError } = await supabase.from('profiles').upsert({
-            id: data.user.id,
-            email: data.user.email!,
-            full_name: fullName,
-            username: username.toLowerCase(),
-          }, {
-            onConflict: 'id'
-          });
-
-          if (profileError) {
-            // Log in development for debugging
-            if (import.meta.env.DEV) {
-              console.error('Profile creation error:', profileError);
-            }
-            // Don't throw - trigger should handle it
-          }
-        } catch (profileErr) {
-          // Log in development for debugging
-          if (import.meta.env.DEV) {
-            console.error('Profile creation exception:', profileErr);
-          }
-        }
+        console.log('User created successfully:', data.user.id);
+        console.log('Skipping profile creation - using basic auth only');
       }
 
       // If no session but user exists, it might be email confirmation

@@ -3,6 +3,7 @@ import { LogIn, UserPlus, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
+import { testSupabaseConfig } from '../lib/supabase';
 
 export default function SignIn() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -67,6 +68,17 @@ export default function SignIn() {
     return null;
   }
 
+  const testConfig = async () => {
+    console.log('Testing Supabase configuration...');
+    const result = await testSupabaseConfig();
+    console.log('Config test result:', result);
+    if (!result.success) {
+      setError(`Supabase yapılandırma hatası: ${result.error?.message || 'Bilinmeyen hata'}`);
+    } else {
+      setError('Supabase yapılandırması çalışıyor!');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -86,12 +98,23 @@ export default function SignIn() {
         const { error } = await signUp(email, password, fullName, username);
         if (error) {
           console.error('SignUp UI Error:', error);
+          console.error('Full error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
+          
           const errorMessage = error.message.toLowerCase();
           if (errorMessage.includes('already registered') || errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
             setError(t.auth.emailAlreadyExists);
           } else if (errorMessage.includes('configuration')) {
             setError('Supabase yapılandırması eksik. .env dosyasını kontrol edin.');
+          } else if (errorMessage.includes('email confirmations are required')) {
+            setError('E-posta onayı gerekli. Supabase Dashboard → Authentication → Settings → "Enable email confirmations" seçeneğini kapatın.');
+          } else if (errorMessage.includes('rate limit')) {
+            setError('Çok fazla kayıt denemesi. Lütfen 5-10 dakika bekleyip tekrar deneyin.');
           } else {
+            // Show the actual error message for debugging
             setError(error.message);
           }
           setLoading(false);

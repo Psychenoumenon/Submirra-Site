@@ -23,3 +23,4 @@ CREATE POLICY "Users can create favorites" ON user_favorites
 
 CREATE POLICY "Users can delete their favorites" ON user_favorites
   FOR DELETE USING (auth.uid() = user_id);
+
