@@ -1075,7 +1075,13 @@ export default function Social() {
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center gap-3 mb-6 pb-6 border-b border-purple-500/20">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden">
+                <button
+                  onClick={() => {
+                    navigate(`/profile/${selectedDream.user_id}`);
+                    setSelectedDream(null);
+                  }}
+                  className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform"
+                >
                   {selectedDream.profiles.avatar_url ? (
                     <img
                       src={selectedDream.profiles.avatar_url}
@@ -1085,10 +1091,18 @@ export default function Social() {
                   ) : (
                     <User className="text-pink-400" size={24} />
                   )}
-                </div>
+                </button>
                 <div className="flex-1">
-                  <p className="text-white font-semibold">{selectedDream.profiles.full_name || t.social.anonymous}</p>
-                  <p className="text-slate-400 text-sm">{formatDate(selectedDream.created_at)}</p>
+                  <button
+                    onClick={() => {
+                      navigate(`/profile/${selectedDream.user_id}`);
+                      setSelectedDream(null);
+                    }}
+                    className="text-left hover:opacity-80 transition-opacity"
+                  >
+                    <p className="text-white font-semibold hover:text-purple-300 transition-colors">{selectedDream.profiles.full_name || t.social.anonymous}</p>
+                    <p className="text-slate-400 text-sm hover:text-purple-400 transition-colors">{formatDate(selectedDream.created_at)}</p>
+                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   {user && selectedDream.user_id === user.id && (

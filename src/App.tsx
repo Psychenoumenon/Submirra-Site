@@ -3,6 +3,7 @@ import { LanguageProvider } from './lib/i18n';
 import { ToastProvider } from './lib/ToastContext';
 import { RouterProvider, useCurrentPage } from './components/Router';
 import Navigation from './components/Navigation';
+import Footer from './components/Footer';
 import Starfield from './components/Starfield';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -16,6 +17,8 @@ import Dashboard from './pages/Dashboard';
 import Social from './pages/Social';
 import ActivateTrial from './pages/ActivateTrial';
 import Messages from './pages/Messages';
+import TermsOfService from './pages/TermsOfService';
+import Feedback from './pages/Feedback';
 
 function AppContent() {
   const currentPage = useCurrentPage();
@@ -51,6 +54,10 @@ function AppContent() {
         return <ActivateTrial />;
       case '/messages':
         return <Messages />;
+      case '/terms':
+        return <TermsOfService />;
+      case '/feedback':
+        return <Feedback />;
       case '/signin':
       case '/signup':
         return <SignIn />;
@@ -60,10 +67,13 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-slate-950 flex flex-col">
       <Starfield />
       <Navigation />
-      {renderPage()}
+      <div className="flex-1">
+        {renderPage()}
+      </div>
+      <Footer />
     </div>
   );
 }

@@ -66,6 +66,9 @@ interface Translations {
     privacyPrivate: string;
     privacyPublicDesc: string;
     privacyPrivateDesc: string;
+    pendingMessage: string;
+    goToLibrary: string;
+    processingTitle: string;
   };
   library: {
     title: string;
@@ -150,6 +153,14 @@ interface Translations {
     followFailed: string;
     bioPlaceholder: string;
     message: string;
+    reportCount: string;
+    reports: string;
+    dangerLow: string;
+    dangerMedium: string;
+    dangerHigh: string;
+    dangerCritical: string;
+    noFollowers: string;
+    noFollowing: string;
   };
   dashboard: {
     title: string;
@@ -245,6 +256,7 @@ interface Translations {
     loadingUser: string;
     searchResults: string;
     searching: string;
+    deleteConversation: string;
   };
   pricing: {
     title: string;
@@ -256,6 +268,7 @@ interface Translations {
       feature1: string;
       feature2: string;
       feature3: string;
+      feature4: string;
       cta: string;
       signUp: string;
     };
@@ -314,6 +327,62 @@ interface Translations {
     trialExpired: string;
     trialExpiredDesc: string;
   };
+  footer: {
+    termsOfService: string;
+    feedback: string;
+  };
+  terms: {
+    title: string;
+    lastUpdated: string;
+    acceptanceTitle: string;
+    acceptanceText: string;
+    serviceTitle: string;
+    serviceText: string;
+    serviceFeature1: string;
+    serviceFeature2: string;
+    serviceFeature3: string;
+    userAccountTitle: string;
+    userAccountText: string;
+    userAccountFeature1: string;
+    userAccountFeature2: string;
+    userAccountFeature3: string;
+    contentTitle: string;
+    contentText: string;
+    contentFeature1: string;
+    contentFeature2: string;
+    contentFeature3: string;
+    privacyTitle: string;
+    privacyText: string;
+    paymentTitle: string;
+    paymentText: string;
+    paymentFeature1: string;
+    paymentFeature2: string;
+    paymentFeature3: string;
+    terminationTitle: string;
+    terminationText: string;
+    contactTitle: string;
+    contactText: string;
+    contactLink: string;
+  };
+  feedback: {
+    title: string;
+    subtitle: string;
+    categoryLabel: string;
+    categoryBug: string;
+    categoryFeature: string;
+    categoryImprovement: string;
+    categoryOther: string;
+    messageLabel: string;
+    placeholder: string;
+    submitButton: string;
+    submitting: string;
+    successMessage: string;
+    errorMessage: string;
+    emptyError: string;
+    thankYou: string;
+    thankYouMessage: string;
+    privacyNote: string;
+  };
 }
 
 const translations: Record<Language, Translations> = {
@@ -340,10 +409,10 @@ const translations: Record<Language, Translations> = {
       getStarted: 'Get Started',
       learnMore: 'Learn More',
       feature1Title: 'Deep Analysis',
-      feature1Desc: 'Advanced AI-powered analysis techniques reveal hidden meanings in your dreams through sophisticated subconscious interpretation. Our neural networks decode symbolic patterns, emotional undertones, and psychological connections.',
-      feature1Details: 'AI Analysis • Symbols • Emotions • Patterns',
+      feature1Desc: 'Advanced analysis techniques reveal hidden meanings in your dreams through sophisticated subconscious interpretation. Our powerful algorithms decode symbolic patterns, emotional undertones, and psychological connections.',
+      feature1Details: 'Deep Analysis • Symbols • Emotions • Patterns',
       feature2Title: 'Visual Generation',
-      feature2Desc: 'Transform your dreams into stunning surreal visualizations that capture their essence and emotion. Our advanced AI creates personalized artwork that brings your subconscious visions to life.',
+      feature2Desc: 'Transform your dreams into stunning surreal visualizations that capture their essence and emotion. Our powerful system creates personalized artwork that brings your subconscious visions to life.',
       feature2Details: 'Surreal Art • Color Mapping • Symbolic Visual • HD Output',
       feature3Title: 'Personal Library',
       feature3Desc: 'Build your personal dream journal with all your analyses and visualizations in one place. Track patterns, explore recurring themes, and discover your subconscious evolution over time.',
@@ -384,6 +453,9 @@ const translations: Record<Language, Translations> = {
       privacyPrivate: 'Private',
       privacyPublicDesc: 'Share with the community',
       privacyPrivateDesc: 'Only visible to you',
+      pendingMessage: 'Your dream will be analyzed and visualized shortly. Please wait. Once completed, you will receive a notification. You can check the status of your dream in your library.',
+      goToLibrary: 'Go to Library',
+      processingTitle: 'Dream Analysis in Progress',
     },
     library: {
       title: 'Your Dream Library',
@@ -470,6 +542,14 @@ const translations: Record<Language, Translations> = {
       followFailed: 'Failed to update follow status',
       bioPlaceholder: 'Write a bio...',
       message: 'Message',
+      reportCount: 'Reports Received',
+      reports: 'reports',
+      dangerLow: 'Low Risk',
+      dangerMedium: 'Medium Risk',
+      dangerHigh: 'High Risk',
+      dangerCritical: 'Critical Risk',
+      noFollowers: 'No followers yet',
+      noFollowing: 'Not following anyone yet',
     },
     dashboard: {
       title: 'Dashboard',
@@ -565,6 +645,7 @@ const translations: Record<Language, Translations> = {
       loadingUser: 'Loading user...',
       searchResults: 'Search Results',
       searching: 'Searching...',
+      deleteConversation: 'Delete Conversation',
     },
     pricing: {
       title: 'Simple, Transparent Pricing',
@@ -576,6 +657,7 @@ const translations: Record<Language, Translations> = {
         feature1: '3 days of access',
         feature2: '3 dream analyses total',
         feature3: '',
+        feature4: 'Beautiful visualizations for your dreams',
         cta: 'Start Free Trial',
         signUp: 'Sign Up Free',
       },
@@ -584,9 +666,9 @@ const translations: Record<Language, Translations> = {
         price: '$15',
         period: 'month',
         description: 'Great for regular dream journaling and insights',
-        feature1: '5 dream analyses per day',
+        feature1: '3 dream analyses per day',
         feature2: '1 visualization per analysis',
-        feature3: 'Save up to 10 analyses monthly',
+        feature3: 'Library resets each month',
         feature4: 'Advanced analysis',
         feature5: 'Storage refreshes each month',
         cta: 'Get Standard',
@@ -597,7 +679,7 @@ const translations: Record<Language, Translations> = {
         price: '$30',
         period: 'month',
         description: 'Unlock your subconscious completely with unlimited library and multiple visualizations',
-        feature1: '10 dream analyses per day',
+        feature1: '5 dream analyses per day',
         feature2: '3 visualizations per analysis',
         feature3: 'Unlimited library storage',
         feature4: 'Priority analysis',
@@ -622,7 +704,7 @@ const translations: Record<Language, Translations> = {
       viewPlans: 'View Plans',
       whatsIncluded: 'What\'s Included:',
       feature1: '3 days of full access to all features',
-      feature2: '3 dream analyses with AI-powered insights',
+      feature2: '3 dream analyses with deep insights',
       feature3: 'Beautiful visualizations for your dreams',
       duration: 'Duration',
       threeDays: '3 Days',
@@ -633,6 +715,62 @@ const translations: Record<Language, Translations> = {
       startAnalyzing: 'Start Analyzing Dreams',
       trialExpired: 'Trial Expired',
       trialExpiredDesc: 'Your 3-day free trial has expired. Upgrade to continue.',
+    },
+    footer: {
+      termsOfService: 'Terms of Service',
+      feedback: 'Feedback',
+    },
+    terms: {
+      title: 'Terms of Service',
+      lastUpdated: 'Last updated: December 2024',
+      acceptanceTitle: '1. Acceptance of Terms',
+      acceptanceText: 'Welcome to Submirra! By accessing and using our platform, you agree to follow these terms. We\'re committed to providing you with a safe and enjoyable experience. If you have any concerns, please contact us.',
+      serviceTitle: '2. Description of Service',
+      serviceText: 'Submirra provides an advanced dream analysis and visualization platform. Our services include:',
+      serviceFeature1: 'Advanced dream analysis and interpretation',
+      serviceFeature2: 'Dream visualization generation',
+      serviceFeature3: 'Social sharing and community features',
+      userAccountTitle: '3. User Accounts',
+      userAccountText: 'To access certain features, you must register for an account. You agree to:',
+      userAccountFeature1: 'Provide accurate and complete information',
+      userAccountFeature2: 'Maintain the security of your account credentials',
+      userAccountFeature3: 'Notify us immediately of any unauthorized use',
+      contentTitle: '4. User Content',
+      contentText: 'You retain ownership of content you submit. By submitting content, you grant us a license to:',
+      contentFeature1: 'Use, display, and distribute your content on the platform',
+      contentFeature2: 'Process and analyze your dreams using our advanced technology',
+      contentFeature3: 'Generate visualizations based on your dream content',
+      privacyTitle: '5. Privacy',
+      privacyText: 'Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the service, to understand our practices.',
+      paymentTitle: '6. Payment and Subscription',
+      paymentText: 'We offer flexible subscription plans to suit your needs:',
+      paymentFeature1: 'Monthly subscriptions can be cancelled at any time',
+      paymentFeature2: 'You\'ll be notified 7 days before your subscription renews',
+      paymentFeature3: 'We offer a 3-day free trial so you can explore all features risk-free',
+      terminationTitle: '7. Account Termination',
+      terminationText: 'We may suspend accounts that violate our community guidelines or engage in harmful behavior. We always aim to resolve issues fairly and will notify you if any action is taken on your account.',
+      contactTitle: '8. Contact Information',
+      contactText: 'If you have any questions about these Terms of Service, please visit our',
+      contactLink: 'contact page',
+    },
+    feedback: {
+      title: 'Feedback',
+      subtitle: 'We value your opinion! Help us improve Submirra',
+      categoryLabel: 'Category',
+      categoryBug: 'Bug Report',
+      categoryFeature: 'Feature Request',
+      categoryImprovement: 'Improvement Suggestion',
+      categoryOther: 'Other',
+      messageLabel: 'Your Feedback',
+      placeholder: 'Tell us what you think...',
+      submitButton: 'Submit Feedback',
+      submitting: 'Submitting...',
+      successMessage: 'Thank you for your feedback!',
+      errorMessage: 'Failed to submit feedback. Please try again.',
+      emptyError: 'Please enter your feedback before submitting.',
+      thankYou: 'Thank You!',
+      thankYouMessage: 'Your feedback has been received and will be reviewed by our team.',
+      privacyNote: 'Your feedback is private and will only be viewed by the Submirra team.',
     },
   },
   tr: {
@@ -658,10 +796,10 @@ const translations: Record<Language, Translations> = {
       getStarted: 'Başlayın',
       learnMore: 'Daha Fazla Bilgi',
       feature1Title: 'Derin Analiz',
-      feature1Desc: 'Gelişmiş AI destekli analiz teknikleri, sofistike bilinçaltı yorumlama yoluyla rüyalarınızdaki gizli anlamları ortaya çıkarır. Sinir ağlarımız sembolik kalıpları, duygusal tonları ve psikolojik bağlantıları çözer.',
-      feature1Details: 'AI Analiz • Semboller • Duygular • Kalıplar',
+      feature1Desc: 'Gelişmiş analiz teknikleri, sofistike bilinçaltı yorumlama yoluyla rüyalarınızdaki gizli anlamları ortaya çıkarır. Güçlü algoritmalarımız sembolik kalıpları, duygusal tonları ve psikolojik bağlantıları çözer.',
+      feature1Details: 'Derin Analiz • Semboller • Duygular • Kalıplar',
       feature2Title: 'Görsel Üretimi',
-      feature2Desc: 'Rüyalarınızı, özünü ve duygusunu yakalayan muhteşem sürreal görselleştirmelere dönüştürün. Gelişmiş AI\'mız bilinçaltı vizyonlarınızı hayata geçiren kişiselleştirilmiş sanat eserleri yaratır.',
+      feature2Desc: 'Rüyalarınızı, özünü ve duygusunu yakalayan muhteşem sürreal görselleştirmelere dönüştürün. Güçlü sistemimiz bilinçaltı vizyonlarınızı hayata geçiren kişiselleştirilmiş sanat eserleri yaratır.',
       feature2Details: 'Sürreal Sanat • Renk Haritası • Sembolik Görsel • HD Çıktı',
       feature3Title: 'Kişisel Kütüphane',
       feature3Desc: 'Tüm analizleriniz ve görselleştirmelerinizle kişisel rüya günlüğünüzü tek bir yerde oluşturun. Kalıpları takip edin, tekrarlayan temaları keşfedin ve zaman içinde bilinçaltı evrimimizi keşfedin.',
@@ -702,6 +840,9 @@ const translations: Record<Language, Translations> = {
       privacyPrivate: 'Özel',
       privacyPublicDesc: 'Toplulukla paylaş',
       privacyPrivateDesc: 'Sadece size özel',
+      pendingMessage: 'Rüyanız kısa süre içinde analiz edilip görselleştirilecektir. Lütfen bekleyiniz. Tamamlandıktan sonra size bildirim gelecektir, kütüphanenizden rüyanızın durumunu kontrol edebilirsiniz.',
+      goToLibrary: 'Kütüphaneye Git',
+      processingTitle: 'Rüya Analizi Devam Ediyor',
     },
     library: {
       title: 'Rüya Kütüphaneniz',
@@ -788,6 +929,14 @@ const translations: Record<Language, Translations> = {
       followFailed: 'Takip durumu güncellenemedi',
       bioPlaceholder: 'Bir biyografi yazın...',
       message: 'Mesaj',
+      reportCount: 'Alınan Şikayetler',
+      reports: 'şikayet',
+      dangerLow: 'Düşük Risk',
+      dangerMedium: 'Orta Risk',
+      dangerHigh: 'Yüksek Risk',
+      dangerCritical: 'Kritik Risk',
+      noFollowers: 'Henüz takipçi yok',
+      noFollowing: 'Henüz kimseyi takip etmiyor',
     },
     dashboard: {
       title: 'Kontrol Paneli',
@@ -883,6 +1032,7 @@ const translations: Record<Language, Translations> = {
       loadingUser: 'Kullanıcı yükleniyor...',
       searchResults: 'Arama Sonuçları',
       searching: 'Aranıyor...',
+      deleteConversation: 'Sohbeti Sil',
     },
     pricing: {
       title: 'Basit ve Şeffaf Fiyatlandırma',
@@ -894,6 +1044,7 @@ const translations: Record<Language, Translations> = {
         feature1: '3 gün erişim',
         feature2: 'Toplam 3 rüya analizi',
         feature3: '',
+        feature4: 'Rüyalarınız için güzel görselleştirmeler',
         cta: 'Ücretsiz Deneyin',
         signUp: 'Ücretsiz Kaydol',
       },
@@ -902,9 +1053,9 @@ const translations: Record<Language, Translations> = {
         price: '₺450',
         period: 'ay',
         description: 'Düzenli rüya günlüğü ve içgörüler için harika',
-        feature1: 'Günde 5 rüya analizi',
+        feature1: 'Günde 3 rüya analizi',
         feature2: 'Analiz başına 1 görselleştirme',
-        feature3: 'Aylık 10 analiz kaydetme',
+        feature3: 'Her ay kütüphane silinir',
         feature4: 'Gelişmiş analiz',
         feature5: 'Her ay yeni depolama alanı',
         cta: 'Standart Al',
@@ -915,7 +1066,7 @@ const translations: Record<Language, Translations> = {
         price: '₺900',
         period: 'ay',
         description: 'Sınırsız kütüphane ve çoklu görselleştirmelerle bilinçaltınızın kilidini tamamen açın',
-        feature1: 'Günde 10 rüya analizi',
+        feature1: 'Günde 5 rüya analizi',
         feature2: 'Analiz başına 3 görselleştirme',
         feature3: 'Sınırsız kütüphane depolama',
         feature4: 'Öncelikli analiz',
@@ -940,7 +1091,7 @@ const translations: Record<Language, Translations> = {
       viewPlans: 'Planları Görüntüle',
       whatsIncluded: 'Neler Dahil:',
       feature1: 'Tüm özelliklere 3 gün tam erişim',
-      feature2: 'Yapay zeka destekli 3 rüya analizi',
+      feature2: 'Derin içgörülerle 3 rüya analizi',
       feature3: 'Rüyalarınız için güzel görselleştirmeler',
       duration: 'Süre',
       threeDays: '3 Gün',
@@ -951,6 +1102,62 @@ const translations: Record<Language, Translations> = {
       startAnalyzing: 'Rüya Analizine Başla',
       trialExpired: 'Deneme Süresi Doldu',
       trialExpiredDesc: '3 günlük ücretsiz denemeniz sona erdi. Devam etmek için yükseltin.',
+    },
+    footer: {
+      termsOfService: 'Hizmet Şartları',
+      feedback: 'Geri Bildirim',
+    },
+    terms: {
+      title: 'Hizmet Şartları',
+      lastUpdated: 'Son güncelleme: Aralık 2024',
+      acceptanceTitle: '1. Şartların Kabulü',
+      acceptanceText: 'Submirra\'ya hoş geldiniz! Platformumuzu kullanarak bu şartları kabul etmiş olursunuz. Size güvenli ve keyifli bir deneyim sunmaya kararlıyız. Herhangi bir sorunuz varsa, lütfen bizimle iletişime geçin.',
+      serviceTitle: '2. Hizmet Açıklaması',
+      serviceText: 'Submirra, gelişmiş rüya analizi ve görselleştirme platformu sağlar. Hizmetlerimiz şunları içerir:',
+      serviceFeature1: 'Gelişmiş rüya analizi ve yorumlama',
+      serviceFeature2: 'Rüya görselleştirme üretimi',
+      serviceFeature3: 'Sosyal paylaşım ve topluluk özellikleri',
+      userAccountTitle: '3. Kullanıcı Hesapları',
+      userAccountText: 'Belirli özelliklere erişmek için bir hesap oluşturmanız gerekir. Şunları kabul edersiniz:',
+      userAccountFeature1: 'Doğru ve eksiksiz bilgi sağlamak',
+      userAccountFeature2: 'Hesap bilgilerinizin güvenliğini korumak',
+      userAccountFeature3: 'Yetkisiz kullanım durumunda derhal bizi bilgilendirmek',
+      contentTitle: '4. Kullanıcı İçeriği',
+      contentText: 'Gönderdiğiniz içeriğin sahipliği size aittir. İçerik göndererek, bize şu lisansı verirsiniz:',
+      contentFeature1: 'İçeriğinizi platformda kullanma, gösterme ve dağıtma',
+      contentFeature2: 'Gelişmiş teknolojimizi kullanarak rüyalarınızı işleme ve analiz etme',
+      contentFeature3: 'Rüya içeriğinize dayalı görselleştirmeler oluşturma',
+      privacyTitle: '5. Gizlilik',
+      privacyText: 'Gizliliğiniz bizim için önemlidir. Uygulamalarımızı anlamak için lütfen hizmetin kullanımınızı da yöneten Gizlilik Politikamızı inceleyin.',
+      paymentTitle: '6. Ödeme ve Abonelik',
+      paymentText: 'İhtiyaçlarınıza uygun esnek abonelik planları sunuyoruz:',
+      paymentFeature1: 'Aylık abonelikler istediğiniz zaman iptal edilebilir',
+      paymentFeature2: 'Aboneliğiniz yenilenmeden 7 gün önce bilgilendirileceksiniz',
+      paymentFeature3: 'Tüm özellikleri risk almadan keşfetmeniz için 3 günlük ücretsiz deneme sunuyoruz',
+      terminationTitle: '7. Hesap Sonlandırma',
+      terminationText: 'Topluluk kurallarımızı ihlal eden veya zararlı davranışlarda bulunan hesapları askıya alabiliriz. Sorunları adil bir şekilde çözmeyi hedefliyoruz ve hesabınızda herhangi bir işlem yapılırsa sizi bilgilendireceğiz.',
+      contactTitle: '8. İletişim Bilgileri',
+      contactText: 'Bu Hizmet Şartları hakkında sorularınız varsa, lütfen',
+      contactLink: 'iletişim sayfamızı',
+    },
+    feedback: {
+      title: 'Geri Bildirim',
+      subtitle: 'Görüşünüz bizim için değerli! Submirra\'yı geliştirmemize yardımcı olun',
+      categoryLabel: 'Kategori',
+      categoryBug: 'Hata Bildirimi',
+      categoryFeature: 'Özellik İsteği',
+      categoryImprovement: 'İyileştirme Önerisi',
+      categoryOther: 'Diğer',
+      messageLabel: 'Geri Bildiriminiz',
+      placeholder: 'Düşüncelerinizi paylaşın...',
+      submitButton: 'Geri Bildirim Gönder',
+      submitting: 'Gönderiliyor...',
+      successMessage: 'Geri bildiriminiz için teşekkür ederiz!',
+      errorMessage: 'Geri bildirim gönderilemedi. Lütfen tekrar deneyin.',
+      emptyError: 'Göndermeden önce lütfen geri bildiriminizi girin.',
+      thankYou: 'Teşekkürler!',
+      thankYouMessage: 'Geri bildiriminiz alındı ve ekibimiz tarafından incelenecektir.',
+      privacyNote: 'Geri bildiriminiz gizlidir ve yalnızca Submirra ekibi tarafından görüntülenecektir.',
     },
   },
 };

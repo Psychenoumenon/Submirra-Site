@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, ArrowLeft, Loader2, Search, MessageCircle, Trash2, Ban, MoreVertical, X } from 'lucide-react';
+import { Send, User, ArrowLeft, Loader2, Search, MessageCircle, Trash2, Ban, MoreVertical } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -34,7 +34,7 @@ interface UserProfile {
 export default function Messages() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -257,6 +257,10 @@ export default function Messages() {
     if (!user) return;
 
     try {
+      // Get hidden conversations from localStorage
+      const hiddenListKey = `hidden_conversations_${user.id}`;
+      const hiddenConversations = new Set<string>(JSON.parse(localStorage.getItem(hiddenListKey) || '[]'));
+
       // Get blocked users (both directions)
       const { data: blockedData } = await supabase
         .from('user_blocks')
@@ -289,6 +293,11 @@ export default function Messages() {
         
         // Skip blocked users
         if (blockedUserIds.has(partnerId)) {
+          continue;
+        }
+        
+        // Skip hidden conversations
+        if (hiddenConversations.has(partnerId)) {
           continue;
         }
         
@@ -365,20 +374,28 @@ export default function Messages() {
   const deleteConversation = async () => {
     if (!user || !selectedConversation) return;
 
-    if (!confirm('Are you sure you want to delete this conversation? This cannot be undone.')) {
+    const confirmMessage = language === 'tr' 
+      ? 'Bu sohbeti silmek istediğinizden emin misiniz? Sohbet listeden gizlenecek, ancak mesajlar korunacaktır.'
+      : 'Are you sure you want to delete this conversation? The conversation will be hidden from your list, but messages will be preserved.';
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
       const conversationToDelete = selectedConversation;
       
-      // Delete all messages between these two users
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedConversation}),and(sender_id.eq.${selectedConversation},receiver_id.eq.${user.id})`);
-
-      if (error) throw error;
+      // Store hidden conversation in localStorage (messages are NOT deleted from database)
+      const hiddenKey = `hidden_conversation_${user.id}_${conversationToDelete}`;
+      localStorage.setItem(hiddenKey, 'true');
+      
+      // Also store in a list for easy filtering
+      const hiddenListKey = `hidden_conversations_${user.id}`;
+      const hiddenList = JSON.parse(localStorage.getItem(hiddenListKey) || '[]');
+      if (!hiddenList.includes(conversationToDelete)) {
+        hiddenList.push(conversationToDelete);
+        localStorage.setItem(hiddenListKey, JSON.stringify(hiddenList));
+      }
 
       setSelectedConversation(null);
       setMessages([]);
@@ -394,33 +411,6 @@ export default function Messages() {
     }
   };
 
-  const deleteConversationWithUser = async (userId: string) => {
-    if (!user) return;
-
-    try {
-      // Delete all messages between these two users
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`);
-
-      if (error) throw error;
-
-      // If this was the selected conversation, clear it
-      if (selectedConversation === userId) {
-        setSelectedConversation(null);
-        setMessages([]);
-      }
-
-      // Immediately remove the conversation from the local state
-      setConversations(prev => prev.filter(conv => conv.user_id !== userId));
-
-      // Also reload conversations to ensure consistency
-      loadConversations();
-    } catch (error) {
-      console.error('Error deleting conversation:', error);
-    }
-  };
 
   const blockUser = async () => {
     if (!user || !selectedConversation) return;
@@ -746,16 +736,11 @@ export default function Messages() {
                         onClick={() => setSelectedConversation(conversation.user_id)}
                         className="flex items-center gap-3 flex-1 min-w-0"
                       >
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {conversation.avatar_url ? (
                             <img src={conversation.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <User size={24} className="text-white" />
-                          )}
-                          {conversation.unread_count > 0 && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
-                              {conversation.unread_count}
-                            </div>
                           )}
                         </div>
                         <div className="flex-1 text-left min-w-0">
@@ -769,18 +754,6 @@ export default function Messages() {
                             <p className="text-slate-400 text-sm truncate">{conversation.last_message}</p>
                           )}
                         </div>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`Delete conversation with ${conversation.full_name}?`)) {
-                            deleteConversationWithUser(conversation.user_id);
-                          }
-                        }}
-                        className="flex-shrink-0 p-1.5 text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                        title="Delete conversation"
-                      >
-                        <X size={18} />
                       </button>
                     </div>
                   ))
@@ -797,24 +770,35 @@ export default function Messages() {
                     <button
                       onClick={() => setSelectedConversation(null)}
                       className="md:hidden text-slate-400 hover:text-white"
+                      title="Back to conversations"
+                      aria-label="Back to conversations"
                     >
                       <ArrowLeft size={24} />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center overflow-hidden">
+                    <button
+                      onClick={() => selectedConversation && navigate(`/profile/${selectedConversation}`)}
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform"
+                      disabled={!selectedConversation}
+                    >
                       {selectedUser?.avatar_url ? (
                         <img src={selectedUser.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <User size={20} className="text-white" />
                       )}
-                    </div>
+                    </button>
                     <div className="flex-1">
                       {selectedUser ? (
-                        <>
-                          <p className="text-white font-medium">{selectedUser.full_name}</p>
+                        <button
+                          onClick={() => selectedConversation && navigate(`/profile/${selectedConversation}`)}
+                          className="text-left hover:opacity-80 transition-opacity"
+                          title={`View ${selectedUser.full_name}'s profile`}
+                          aria-label={`View ${selectedUser.full_name}'s profile`}
+                        >
+                          <p className="text-white font-medium hover:text-purple-300 transition-colors">{selectedUser.full_name}</p>
                           {selectedUser.username && (
-                            <p className="text-slate-400 text-sm">@{selectedUser.username}</p>
+                            <p className="text-slate-400 text-sm hover:text-purple-400 transition-colors">@{selectedUser.username}</p>
                           )}
-                        </>
+                        </button>
                       ) : (
                         <div className="flex items-center gap-2">
                           <Loader2 className="animate-spin text-purple-400" size={16} />
@@ -826,6 +810,8 @@ export default function Messages() {
                       <button
                         onClick={() => setShowMenu(!showMenu)}
                         className="p-2 text-slate-400 hover:text-white transition-colors"
+                        title="Menu"
+                        aria-label="Open menu"
                       >
                         <MoreVertical size={20} />
                       </button>
@@ -836,6 +822,16 @@ export default function Messages() {
                             onClick={() => setShowMenu(false)}
                           />
                           <div className="absolute right-0 top-12 w-48 bg-slate-900 border border-purple-500/30 rounded-lg shadow-2xl z-50 overflow-hidden">
+                            <button
+                              onClick={() => {
+                                setShowMenu(false);
+                                deleteConversation();
+                              }}
+                              className="w-full px-4 py-3 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-3 text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 size={18} />
+                              <span>{t.messages.deleteConversation}</span>
+                            </button>
                             <button
                               onClick={blockUser}
                               className="w-full px-4 py-3 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-3 text-red-400 hover:text-red-300"

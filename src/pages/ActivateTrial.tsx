@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
+import { useToast } from '../lib/ToastContext';
 import { supabase } from '../lib/supabase';
 import { Sparkles, Check, ArrowRight } from 'lucide-react';
 
@@ -9,6 +10,7 @@ export default function ActivateTrial() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [activating, setActivating] = useState(false);
   const [activated, setActivated] = useState(false);
   const [alreadyUsed, setAlreadyUsed] = useState(false);
@@ -43,28 +45,95 @@ export default function ActivateTrial() {
   };
 
   const activateTrial = async () => {
-    if (!user || alreadyUsed) return;
+    if (!user || alreadyUsed) {
+      showToast('Kullanıcı bulunamadı veya deneme zaten kullanılmış.', 'error');
+      return;
+    }
 
     setActivating(true);
 
     try {
+      // Önce profil var mı kontrol et
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError && profileError.code === 'PGRST116') {
+        // Profil yoksa oluştur
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            full_name: '',
+            trial_used: false,
+            trial_start: null,
+            trial_end: null,
+          });
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          throw insertError;
+        }
+      } else if (profileError) {
+        console.error('Error checking profile:', profileError);
+        throw profileError;
+      }
+
       const trialStart = new Date();
       const trialEnd = new Date(trialStart.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days
 
-      const { error } = await supabase
+      console.log('Activating trial for user:', user.id);
+      console.log('Trial start:', trialStart.toISOString());
+      console.log('Trial end:', trialEnd.toISOString());
+
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           trial_used: true,
           trial_start: trialStart.toISOString(),
           trial_end: trialEnd.toISOString(),
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('Profil güncellenemedi. Lütfen tekrar deneyin.');
+      }
+
+      console.log('Trial activated successfully:', data);
 
       setActivated(true);
-    } catch (error) {
+      showToast(t.trial.activated, 'success');
+      
+      // Sayfanın yukarısına scroll et
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    } catch (error: any) {
       console.error('Error activating trial:', error);
+      let errorMessage = 'Ücretsiz deneme başlatılamadı. Lütfen tekrar deneyin.';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.code === 'PGRST301') {
+        errorMessage = 'Yetkiniz yok. Lütfen giriş yapın.';
+      } else if (error?.code === '23505') {
+        errorMessage = 'Bu işlem zaten yapılmış.';
+      }
+      
+      showToast(errorMessage, 'error');
     } finally {
       setActivating(false);
     }

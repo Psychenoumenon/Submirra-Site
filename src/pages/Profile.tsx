@@ -61,6 +61,8 @@ export default function Profile() {
   const [isBlockedBy, setIsBlockedBy] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [reportCount, setReportCount] = useState<number>(0);
+  const [dangerLevel, setDangerLevel] = useState<'low' | 'medium' | 'high' | 'critical'>('low');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,6 +87,7 @@ export default function Profile() {
         checkBlockStatus(userId);
         checkFavoriteStatus(userId);
       }
+      loadReportInfo(userId);
     } else {
       // Viewing own profile
       if (!user) {
@@ -95,6 +98,9 @@ export default function Profile() {
       setIsOwnProfile(true);
       loadProfile();
       loadStats();
+      if (user) {
+        loadReportInfo(user.id);
+      }
     }
   }, [user, navigate, currentPage, window.location.pathname]);
 
@@ -128,14 +134,21 @@ export default function Profile() {
     }
   };
 
-  const loadOtherUserProfile = async (userId: string) => {
+  const loadOtherUserProfile = async (userIdOrUsername: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      let query = supabase.from('profiles').select('*');
+      
+      // Check if it's a UUID (user ID) or username
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdOrUsername);
+      
+      if (isUUID) {
+        query = query.eq('id', userIdOrUsername);
+      } else {
+        query = query.eq('username', userIdOrUsername);
+      }
+      
+      const { data, error } = await query.single();
 
       if (error) throw error;
 
@@ -147,9 +160,13 @@ export default function Profile() {
         bio: data.bio || null,
         username: data.username || null,
       });
+      
+      // Set the actual user ID for other operations
+      setProfileUserId(data.id);
     } catch (error) {
       console.error('Error loading other user profile:', error);
-      showToast('Failed to load profile', 'error');
+      showToast('Kullanıcı profili bulunamadı', 'error');
+      navigate('/social');
     } finally {
       setLoading(false);
     }
@@ -507,6 +524,40 @@ export default function Profile() {
     }
   };
 
+  const loadReportInfo = async (userId: string) => {
+    try {
+      const { data: reports, error } = await supabase
+        .from('user_reports')
+        .select('id')
+        .eq('reported_user_id', userId);
+
+      if (error) throw error;
+
+      const count = reports?.length || 0;
+      setReportCount(count);
+
+      // Determine danger level based on report count
+      // 0 reports = Low Risk (Safe)
+      // 1-3 reports = Medium Risk (Caution)
+      // 4-9 reports = High Risk (Warning)
+      // 10+ reports = Critical Risk (Danger)
+      if (count === 0) {
+        setDangerLevel('low');
+      } else if (count >= 1 && count <= 3) {
+        setDangerLevel('medium');
+      } else if (count >= 4 && count <= 9) {
+        setDangerLevel('high');
+      } else {
+        setDangerLevel('critical');
+      }
+    } catch (error) {
+      console.error('Error loading report info:', error);
+      // Set default values on error
+      setReportCount(0);
+      setDangerLevel('low');
+    }
+  };
+
   const loadStats = async () => {
     if (!user) return;
 
@@ -606,26 +657,34 @@ export default function Profile() {
 
     setLoadingFollows(true);
     try {
-      const { data, error } = await supabase
+      // Get all follows where this user is being followed
+      const { data: followsData, error: followsError } = await supabase
         .from('follows')
-        .select(`
-          follower_id,
-          follower:follower_id (
-            id,
-            full_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('follower_id')
         .eq('following_id', profileUserId);
 
-      if (error) throw error;
+      if (followsError) throw followsError;
 
-      const followers = (data || []).map((item: any) => item.follower).filter(Boolean);
-      setFollowersList(followers);
+      if (!followsData || followsData.length === 0) {
+        setFollowersList([]);
+        setShowFollowersModal(true);
+        return;
+      }
+
+      // Get all follower profiles
+      const followerIds = followsData.map(f => f.follower_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', followerIds);
+
+      if (profilesError) throw profilesError;
+
+      setFollowersList(profilesData || []);
       setShowFollowersModal(true);
     } catch (error) {
       console.error('Error loading followers:', error);
+      showToast('Failed to load followers', 'error');
     } finally {
       setLoadingFollows(false);
     }
@@ -636,26 +695,34 @@ export default function Profile() {
 
     setLoadingFollows(true);
     try {
-      const { data, error } = await supabase
+      // Get all follows where this user is following others
+      const { data: followsData, error: followsError } = await supabase
         .from('follows')
-        .select(`
-          following_id,
-          following:following_id (
-            id,
-            full_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('following_id')
         .eq('follower_id', profileUserId);
 
-      if (error) throw error;
+      if (followsError) throw followsError;
 
-      const following = (data || []).map((item: any) => item.following).filter(Boolean);
-      setFollowingList(following);
+      if (!followsData || followsData.length === 0) {
+        setFollowingList([]);
+        setShowFollowingModal(true);
+        return;
+      }
+
+      // Get all following profiles
+      const followingIds = followsData.map(f => f.following_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', followingIds);
+
+      if (profilesError) throw profilesError;
+
+      setFollowingList(profilesData || []);
       setShowFollowingModal(true);
     } catch (error) {
       console.error('Error loading following:', error);
+      showToast('Failed to load following', 'error');
     } finally {
       setLoadingFollows(false);
     }
@@ -941,69 +1008,106 @@ export default function Profile() {
 
         <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-8 relative">
           {/* Profile Menu - Top Right Corner */}
-          {!isOwnProfile && user && (
-            <div className="absolute top-4 right-4 z-10">
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-200"
-              >
-                <MoreVertical size={16} />
-              </button>
-              
-              {showProfileMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowProfileMenu(false)}
-                  />
-                  <div className="absolute right-0 top-10 w-48 bg-slate-900 border border-purple-500/30 rounded-lg shadow-2xl z-50 overflow-hidden">
-                    <button
-                      onClick={handleToggleFavorite}
-                      className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-white text-sm"
-                    >
-                      {isFavorite ? (
-                        <>
-                          <StarOff size={16} className="text-yellow-400" />
-                          <span>Favorilerden Çıkar</span>
-                        </>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-200"
+            >
+              <MoreVertical size={16} />
+            </button>
+            
+            {showProfileMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowProfileMenu(false)}
+                />
+                <div className="absolute right-0 top-10 w-48 bg-slate-900 border border-purple-500/30 rounded-lg shadow-2xl z-50 overflow-hidden">
+                  {!isOwnProfile && user && (
+                    <>
+                      <button
+                        onClick={handleToggleFavorite}
+                        className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-white text-sm"
+                      >
+                        {isFavorite ? (
+                          <>
+                            <StarOff size={16} className="text-yellow-400" />
+                            <span>Favorilerden Çıkar</span>
+                          </>
+                        ) : (
+                          <>
+                            <Star size={16} className="text-yellow-400" />
+                            <span>Favorilere Ekle</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      {isBlocked ? (
+                        <button
+                          onClick={handleUnblockUser}
+                          className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-green-400 text-sm"
+                        >
+                          <Ban size={16} />
+                          <span>Engeli Kaldır</span>
+                        </button>
                       ) : (
-                        <>
-                          <Star size={16} className="text-yellow-400" />
-                          <span>Favorilere Ekle</span>
-                        </>
+                        <button
+                          onClick={handleBlockUser}
+                          className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-red-400 text-sm"
+                        >
+                          <Ban size={16} />
+                          <span>Kullanıcıyı Engelle</span>
+                        </button>
                       )}
-                    </button>
-                    
-                    {isBlocked ? (
+                      
                       <button
-                        onClick={handleUnblockUser}
-                        className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-green-400 text-sm"
+                        onClick={handleReportUser}
+                        className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-orange-400 text-sm border-t border-slate-700/50"
                       >
-                        <Ban size={16} />
-                        <span>Engeli Kaldır</span>
+                        <Flag size={16} />
+                        <span>Şikayet Et</span>
                       </button>
-                    ) : (
-                      <button
-                        onClick={handleBlockUser}
-                        className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-red-400 text-sm"
-                      >
-                        <Ban size={16} />
-                        <span>Kullanıcıyı Engelle</span>
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={handleReportUser}
-                      className="w-full px-3 py-2.5 text-left hover:bg-slate-950/50 transition-colors flex items-center gap-2 text-orange-400 text-sm border-t border-slate-700/50"
-                    >
-                      <Flag size={16} />
-                      <span>Şikayet Et</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                    </>
+                  )}
+                  
+                  {/* Report Info - Compact version in menu */}
+                  {profileUserId && (
+                    <div className="px-3 py-2 border-t border-slate-700/50">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Flag className={
+                            dangerLevel === 'low' ? 'text-green-400' :
+                            dangerLevel === 'medium' ? 'text-yellow-400' :
+                            dangerLevel === 'high' ? 'text-orange-400' :
+                            'text-red-400'
+                          } size={12} />
+                          <span className="text-xs text-slate-400">{t.profile.reportCount}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-white">{reportCount}</span>
+                          <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{
+                            backgroundColor: dangerLevel === 'low' ? 'rgba(34, 197, 94, 0.2)' :
+                                             dangerLevel === 'medium' ? 'rgba(234, 179, 8, 0.2)' :
+                                             dangerLevel === 'high' ? 'rgba(249, 115, 22, 0.2)' :
+                                             'rgba(239, 68, 68, 0.2)',
+                            color: dangerLevel === 'low' ? 'rgb(34, 197, 94)' :
+                                   dangerLevel === 'medium' ? 'rgb(234, 179, 8)' :
+                                   dangerLevel === 'high' ? 'rgb(249, 115, 22)' :
+                                   'rgb(239, 68, 68)'
+                          }}>
+                            {dangerLevel === 'low' ? t.profile.dangerLow :
+                             dangerLevel === 'medium' ? t.profile.dangerMedium :
+                             dangerLevel === 'high' ? t.profile.dangerHigh :
+                             t.profile.dangerCritical}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
           
           <div className="space-y-6">
             {/* Profile Picture Section */}
@@ -1145,6 +1249,7 @@ export default function Profile() {
                 </button>
               </div>
             )}
+
 
             {/* Profile Details */}
             {isOwnProfile && (
@@ -1335,7 +1440,7 @@ export default function Profile() {
                   <Loader2 className="animate-spin text-purple-400" size={32} />
                 </div>
               ) : followersList.length === 0 ? (
-                <p className="text-slate-400 text-center py-8">No followers yet</p>
+                <p className="text-slate-400 text-center py-8">{t.profile.noFollowers}</p>
               ) : (
                 <div className="space-y-3">
                   {followersList.map((follower) => (
@@ -1392,7 +1497,7 @@ export default function Profile() {
                   <Loader2 className="animate-spin text-purple-400" size={32} />
                 </div>
               ) : followingList.length === 0 ? (
-                <p className="text-slate-400 text-center py-8">Not following anyone yet</p>
+                <p className="text-slate-400 text-center py-8">{t.profile.noFollowing}</p>
               ) : (
                 <div className="space-y-3">
                   {followingList.map((following) => (

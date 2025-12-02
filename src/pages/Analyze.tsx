@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, BookOpen, ArrowRight } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -244,43 +244,44 @@ export default function Analyze() {
           </form>
         ) : (
           <div className="max-w-6xl mx-auto animate-fade-in">
-            <div className="mb-6 flex justify-end">
-              <button
-                onClick={() => {
-                  setAnalysis(null);
-                  setImageUrl(null);
-                }}
-                className="px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 hover:bg-gradient-to-r hover:from-pink-600/30 hover:to-purple-600/30 transition-all duration-200 text-sm md:text-base"
-              >
-                {t.analyze.analyzeAnother}
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-              <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-5 md:p-8 hover:border-purple-500/30 transition-all duration-300 shadow-xl shadow-purple-500/5">
-              <h2 className="text-xl md:text-2xl font-semibold text-white mb-3 md:mb-4">
-                {t.analyze.analysisTitle}
-              </h2>
-                <div className="bg-slate-950/30 rounded-lg p-4">
-                  <p className="text-sm md:text-base text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {analysis}
-                  </p>
-                </div>
-              </div>
-
-              {imageUrl && (
-                <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-5 md:p-8 hover:border-cyan-500/30 transition-all duration-300 shadow-xl shadow-cyan-500/5">
-                  <h2 className="text-xl md:text-2xl font-semibold text-white mb-3 md:mb-4">
-                    {t.analyze.visualizationTitle}
-                  </h2>
-                  <div className="w-full aspect-video bg-black rounded-xl shadow-2xl shadow-cyan-500/20 flex items-center justify-center overflow-hidden group">
-                    <img
-                      src={imageUrl}
-                      alt="Dream visualization"
-                      className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500"
-                    />
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6 md:p-8 backdrop-blur-sm">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center border border-pink-500/30">
+                    <Sparkles className="text-pink-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-white mb-2">
+                      {t.analyze.processingTitle}
+                    </h3>
+                    <p className="text-sm md:text-base text-pink-300 leading-relaxed">
+                      {t.analyze.pendingMessage}
+                    </p>
                   </div>
                 </div>
-              )}
+                
+                <div className="flex flex-col sm:flex-row gap-3 justify-start">
+                  <button
+                    onClick={() => navigate('/library')}
+                    className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-xl font-medium transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/30 hover:scale-105"
+                  >
+                    <BookOpen size={18} />
+                    <span>{t.analyze.goToLibrary}</span>
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setAnalysis(null);
+                      setImageUrl(null);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 hover:from-purple-500/90 hover:to-pink-500/90 text-white border border-purple-500/30 hover:border-purple-400/50 rounded-xl font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/30 hover:scale-105"
+                  >
+                    <Sparkles size={18} />
+                    <span>{t.analyze.analyzeAnother}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -317,32 +317,12 @@ export default function Library() {
                 className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-xl p-6 hover:border-purple-500/40 transition-all duration-300 relative group overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="absolute top-4 right-4 flex gap-2 z-10">
-                  <button
-                    onClick={(e) => toggleFavorite(dream.id, e)}
-                    className={`p-2 rounded-lg border transition-all duration-300 hover:scale-110 ${
-                      dream.is_favorite
-                        ? 'bg-pink-500/20 border-pink-500/50 text-pink-400'
-                        : 'bg-slate-800/80 border-slate-700/50 text-slate-400 hover:border-pink-500/50 hover:text-pink-400'
-                    }`}
-                    title={dream.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                  >
-                    <Heart size={16} className={dream.is_favorite ? 'fill-current' : ''} />
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteDream(dream.id, e)}
-                    className="p-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 rounded-lg text-red-400 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/30"
-                    title="Delete dream"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                </div>
                 <div
                   onClick={() => setSelectedDream(dream)}
                   className="cursor-pointer relative z-10"
                 >
                   {dream.image_url && (
-                    <div className="overflow-hidden rounded-lg mb-4">
+                    <div className="overflow-hidden rounded-lg mb-4 relative">
                       <img
                         src={dream.image_url}
                         alt="Dream visualization"
@@ -350,6 +330,39 @@ export default function Library() {
                       />
                     </div>
                   )}
+                  
+                  {/* Butonlar görselin altında, görünür */}
+                  <div className="flex gap-2 mb-4 justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(dream.id, e);
+                      }}
+                      className={`px-4 py-2 rounded-lg border transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
+                        dream.is_favorite
+                          ? 'bg-pink-500/20 border-pink-500/50 text-pink-400'
+                          : 'bg-slate-800/80 border-slate-700/50 text-slate-400 hover:border-pink-500/50 hover:text-pink-400'
+                      }`}
+                      title={dream.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <Heart size={18} className={dream.is_favorite ? 'fill-current' : ''} />
+                      <span className="text-sm font-medium">
+                        {dream.is_favorite ? 'Favorilerden Çıkar' : 'Favorilere Ekle'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteDream(dream.id, e);
+                      }}
+                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 rounded-lg text-red-400 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/30 flex items-center gap-2"
+                      title="Delete dream"
+                    >
+                      <Trash2 size={18} />
+                      <span className="text-sm font-medium">Sil</span>
+                    </button>
+                  </div>
+                  
                   <div className="flex items-center gap-2 text-slate-500 text-sm mb-2">
                     <Calendar size={14} />
                     {formatDate(dream.created_at)}

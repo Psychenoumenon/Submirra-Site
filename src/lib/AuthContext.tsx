@@ -21,6 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
+      // Check trial expiration when session loads
+      if (session?.user) {
+        checkTrialExpiration(session.user.id);
+      }
     }).catch(() => {
       // Silent error handling
       setLoading(false);
@@ -29,10 +33,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
+      // Check trial expiration when auth state changes
+      if (session?.user) {
+        checkTrialExpiration(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Function to check trial expiration and create notification
+  const checkTrialExpiration = async (userId: string) => {
+    try {
+      // Call the database function to check and create notification if needed
+      const { error } = await supabase.rpc('check_trial_expiration', {
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error checking trial expiration:', error);
+      }
+    } catch (error) {
+      console.error('Error in checkTrialExpiration:', error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Heart, MessageCircle, UserPlus, X, Loader2 } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from './Router';
 import { supabase } from '../lib/supabase';
@@ -7,8 +7,8 @@ import { useToast } from '../lib/ToastContext';
 
 interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'follow';
-  actor_id: string;
+  type: 'like' | 'comment' | 'follow' | 'dream_completed' | 'trial_expired';
+  actor_id: string | null;
   dream_id: string | null;
   comment_id: string | null;
   created_at: string;
@@ -17,7 +17,7 @@ interface Notification {
     full_name: string;
     avatar_url: string | null;
     username: string | null;
-  };
+  } | null;
 }
 
 export default function Notifications() {
@@ -79,7 +79,7 @@ export default function Notifications() {
 
       const formattedNotifications = (data || []).map(notif => ({
         ...notif,
-        actor_profile: notif.actor_profile || { full_name: 'Anonymous', avatar_url: null, username: null }
+        actor_profile: notif.actor_profile || (notif.type === 'dream_completed' ? null : { full_name: 'Anonymous', avatar_url: null, username: null })
       }));
 
       setNotifications(formattedNotifications);
@@ -164,10 +164,14 @@ export default function Notifications() {
     markAsRead(notification.id);
     setIsOpen(false);
 
-    if (notification.dream_id) {
+    if (notification.type === 'dream_completed') {
+      navigate('/library');
+    } else if (notification.type === 'trial_expired') {
+      navigate('/pricing');
+    } else if (notification.dream_id) {
       navigate('/social');
       // Could navigate to specific dream if we had a route
-    } else if (notification.type === 'follow') {
+    } else if (notification.type === 'follow' && notification.actor_id) {
       navigate(`/profile/${notification.actor_id}`);
     }
   };
@@ -180,13 +184,25 @@ export default function Notifications() {
         return <MessageCircle className="text-purple-400" size={18} />;
       case 'follow':
         return <UserPlus className="text-cyan-400" size={18} />;
+      case 'dream_completed':
+        return <CheckCircle className="text-green-400" size={18} />;
+      case 'trial_expired':
+        return <AlertCircle className="text-yellow-400" size={18} />;
       default:
         return <Bell className="text-slate-400" size={18} />;
     }
   };
 
   const getNotificationText = (notification: Notification) => {
-    const name = notification.actor_profile.full_name || notification.actor_profile.username || 'Someone';
+    if (notification.type === 'dream_completed') {
+      return 'Your dream analysis is ready! Click to view in your library.';
+    }
+    
+    if (notification.type === 'trial_expired') {
+      return 'Your 3-day free trial has expired. Upgrade to continue using Submirra!';
+    }
+    
+    const name = notification.actor_profile?.full_name || notification.actor_profile?.username || 'Someone';
     switch (notification.type) {
       case 'like':
         return `${name} liked your dream`;
@@ -241,9 +257,9 @@ export default function Notifications() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-12 w-96 max-h-[600px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-purple-500/20 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Notifications</h3>
+          <div className="absolute right-0 top-12 w-[500px] max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-purple-500/20 flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-white">Notifications</h3>
               <div className="flex gap-2">
                 {unreadCount > 0 && (
                   <button
@@ -283,14 +299,14 @@ export default function Notifications() {
                     >
                       <button
                         onClick={() => handleNotificationClick(notification)}
-                        className="w-full p-4 text-left hover:bg-slate-950/50 transition-colors"
+                        className="w-full p-5 text-left hover:bg-slate-950/50 transition-colors"
                       >
-                        <div className="flex gap-3">
+                        <div className="flex gap-4">
                           <div className="flex-shrink-0 mt-1">
                             {getNotificationIcon(notification.type)}
                           </div>
-                          <div className="flex-1 min-w-0 pr-6">
-                            <p className="text-white text-sm mb-1">
+                          <div className="flex-1 min-w-0 pr-8">
+                            <p className="text-white text-sm leading-relaxed mb-2 break-words">
                               {getNotificationText(notification)}
                             </p>
                             <p className="text-slate-400 text-xs">

@@ -59,6 +59,10 @@ export default function Pricing() {
                   <span>{t.pricing.freeTrial.feature3}</span>
                 </li>
               )}
+              <li className="flex items-start gap-2 text-slate-300 text-sm">
+                <Check className="text-purple-400 flex-shrink-0 mt-1" size={16} />
+                <span>{t.pricing.freeTrial.feature4}</span>
+              </li>
             </ul>
 
             <button
