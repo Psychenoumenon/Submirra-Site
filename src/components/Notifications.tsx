@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Bell, Heart, MessageCircle, UserPlus, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Bell, Heart, MessageCircle, UserPlus, X, Loader2, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from './Router';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/ToastContext';
+import { useLanguage } from '../lib/i18n';
 
 interface Notification {
   id: string;
@@ -24,39 +25,13 @@ export default function Notifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-
-    loadNotifications();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('notifications-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          loadNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -89,7 +64,62 @@ export default function Notifications() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    loadNotifications();
+
+    // Set up real-time subscription for notifications
+    const notificationsChannel = supabase
+      .channel('notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          console.log('New notification received');
+          loadNotifications();
+        }
+      )
+      .subscribe();
+
+    // Also listen to dreams table updates to catch when status changes to 'completed'
+    // This ensures notifications appear immediately when dream analysis completes
+    const dreamsChannel = supabase
+      .channel('dreams-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'dreams',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Dream status changed:', payload);
+          // Check if status changed to 'completed'
+          if (payload.new.status === 'completed' && payload.old.status !== 'completed') {
+            console.log('Dream completed, reloading notifications');
+            // Small delay to ensure trigger has created the notification
+            setTimeout(() => {
+              loadNotifications();
+            }, 500);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(dreamsChannel);
+    };
+  }, [user, loadNotifications]);
 
   const markAsRead = async (notificationId: string) => {
     if (!user) return;
@@ -157,6 +187,30 @@ export default function Notifications() {
     } catch (error) {
       console.error('Error marking all as read:', error);
       showToast('Failed to mark all as read', 'error');
+    }
+  };
+
+  const deleteAllNotifications = async () => {
+    if (!user) return;
+
+    if (!confirm(t.notifications.deleteAllConfirm || 'Are you sure you want to delete all notifications?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setNotifications([]);
+      setUnreadCount(0);
+      showToast(t.notifications.deleteAllSuccess || 'All notifications deleted', 'success');
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      showToast(t.notifications.deleteAllError || 'Failed to delete all notifications', 'error');
     }
   };
 
@@ -260,11 +314,21 @@ export default function Notifications() {
           <div className="absolute right-0 top-12 w-[500px] max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
             <div className="p-5 border-b border-purple-500/20 flex items-center justify-between">
               <h3 className="text-xl font-semibold text-white">Notifications</h3>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                {notifications.length > 0 && (
+                  <button
+                    onClick={deleteAllNotifications}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors px-2 py-1 rounded hover:bg-red-500/10 flex items-center gap-1"
+                    title={t.notifications.deleteAll || 'Delete all notifications'}
+                  >
+                    <Trash2 size={12} />
+                    {t.notifications.deleteAll || 'Delete all'}
+                  </button>
+                )}
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1 rounded hover:bg-purple-500/10"
                   >
                     Mark all read
                   </button>

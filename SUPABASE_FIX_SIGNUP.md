@@ -125,3 +125,4 @@ CREATE TRIGGER on_auth_user_created
 ## Sonuç
 
 Bu adımları tamamladıktan sonra yeni kullanıcılar başarıyla kayıt olabilmelidir.
+

@@ -185,3 +185,4 @@ $$ LANGUAGE plpgsql;
 ---
 
 *Bu dokümantasyon, Submirra platformunun başarıyla kurulduğunu ve tüm sorunların çözüldüğünü belgeler.*
+

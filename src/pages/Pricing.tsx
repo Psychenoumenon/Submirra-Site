@@ -1,19 +1,70 @@
-import { Check, Sparkles, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Sparkles, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
+import { useToast } from '../lib/ToastContext';
+import { supabase } from '../lib/supabase';
 
 export default function Pricing() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { showToast } = useToast();
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async (planType: 'standard' | 'premium') => {
+    // TEMPORARILY DISABLED: Standard and Premium plans are disabled for now
+    // TODO: Re-enable when user requests it by removing this check
+    if (planType === 'standard' || planType === 'premium') {
+      showToast(
+        planType === 'premium' 
+          ? 'Premium plan is currently unavailable. Please try again later.' 
+          : 'Standard plan is currently unavailable. Please try again later.',
+        'info'
+      );
+      return;
+    }
+
     if (!user) {
       navigate('/signin');
       return;
     }
-    alert('Payment integration coming soon! This will redirect to Stripe checkout.');
+
+    setIsProcessing(planType);
+
+    try {
+      // Supabase RPC fonksiyonunu çağırarak subscription'ı güncelle
+      const { error } = await supabase.rpc('update_subscription_plan', {
+        p_user_id: user.id,
+        p_plan_type: planType
+      });
+
+      if (error) {
+        console.error('Subscription update error:', error);
+        throw error;
+      }
+
+      showToast(
+        planType === 'premium' 
+          ? 'Premium plan activated successfully! 🎉' 
+          : 'Standard plan activated successfully! 🎉',
+        'success'
+      );
+
+      // Kısa bir gecikme sonrası sayfayı yenile (subscription bilgilerini güncellemek için)
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error: any) {
+      console.error('Error updating subscription:', error);
+      showToast(
+        error?.message || 'Failed to update subscription. Please try again.',
+        'error'
+      );
+    } finally {
+      setIsProcessing(null);
+    }
   };
 
   return (
@@ -101,15 +152,19 @@ export default function Pricing() {
                 <Check className="text-cyan-400 flex-shrink-0 mt-1" size={16} />
                 <span>{t.pricing.standard.feature4}</span>
               </li>
-              <li className="flex items-start gap-2 text-slate-300 text-sm">
-                <Check className="text-cyan-400 flex-shrink-0 mt-1" size={16} />
-                <span>{t.pricing.standard.feature5}</span>
-              </li>
+              {t.pricing.standard.feature5 && (
+                <li className="flex items-start gap-2 text-slate-300 text-sm">
+                  <Check className="text-cyan-400 flex-shrink-0 mt-1" size={16} />
+                  <span>{t.pricing.standard.feature5}</span>
+                </li>
+              )}
             </ul>
 
+            {/* TEMPORARILY DISABLED: Standard plan button disabled - can be re-enabled later */}
             <button
-              onClick={handleSubscribe}
-              className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-semibold hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/30"
+              onClick={() => handleSubscribe('standard')}
+              disabled={true}
+              className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-600/50 to-blue-600/50 text-white/50 text-sm font-semibold transition-all duration-300 opacity-50 cursor-not-allowed flex items-center justify-center gap-2"
             >
               {t.pricing.standard.cta}
             </button>
@@ -155,9 +210,11 @@ export default function Pricing() {
               </li>
             </ul>
 
+            {/* TEMPORARILY DISABLED: Premium plan button disabled - can be re-enabled later */}
             <button
-              onClick={handleSubscribe}
-              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold hover:from-pink-500 hover:to-purple-500 transition-all duration-300 hover:shadow-2xl hover:shadow-pink-500/40 hover:scale-105"
+              onClick={() => handleSubscribe('premium')}
+              disabled={true}
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-pink-600/50 to-purple-600/50 text-white/50 font-semibold transition-all duration-300 opacity-50 cursor-not-allowed flex items-center justify-center gap-2"
             >
               {t.pricing.premium.cta}
             </button>

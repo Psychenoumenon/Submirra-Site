@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X } from 'lucide-react';
+import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -11,6 +11,8 @@ interface PublicDream {
   dream_text: string;
   analysis_text: string;
   image_url: string;
+  image_url_2?: string | null;
+  image_url_3?: string | null;
   created_at: string;
   user_id: string;
   status?: string;
@@ -63,6 +65,48 @@ export default function Social() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastDreamElementRef = useRef<HTMLDivElement | null>(null);
+  const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  // Helper function to get all available images for a dream
+  const getDreamImages = (dream: PublicDream): string[] => {
+    const images: string[] = [];
+    if (dream.image_url) images.push(dream.image_url);
+    if (dream.image_url_2) images.push(dream.image_url_2);
+    if (dream.image_url_3) images.push(dream.image_url_3);
+    return images;
+  };
+
+  // Handle touch events for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (dreamId: string, images: string[]) => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+    
+    if (Math.abs(distance) > minSwipeDistance) {
+      const currentIndex = carouselIndices[dreamId] || 0;
+      if (distance > 0 && currentIndex < images.length - 1) {
+        // Swipe left - next image
+        setCarouselIndices({ ...carouselIndices, [dreamId]: currentIndex + 1 });
+      } else if (distance < 0 && currentIndex > 0) {
+        // Swipe right - previous image
+        setCarouselIndices({ ...carouselIndices, [dreamId]: currentIndex - 1 });
+      }
+    }
+    
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
 
   useEffect(() => {
     loadPublicDreams();
@@ -92,6 +136,36 @@ export default function Social() {
       if (observerRef.current) observerRef.current.disconnect();
     };
   }, [hasMore, loadingMore, loading, dreams]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (selectedDream) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    }
+
+    return () => {
+      // Cleanup on unmount
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+    };
+  }, [selectedDream]);
 
   const loadFollowingUsers = async () => {
     if (!user) return;
@@ -872,19 +946,84 @@ export default function Social() {
                 className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group cursor-pointer"
                 onClick={() => openDreamModal(dream)}
               >
-                {/* Dream Image - Instagram Style */}
-                <div className="relative aspect-square bg-slate-950 overflow-hidden">
-                  {dream.image_url ? (
-                    <img
-                      src={dream.image_url}
-                      alt="Dream visualization"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
-                      <Sparkles className="text-purple-400/50" size={48} />
-                    </div>
-                  )}
+                {/* Dream Image - Instagram Style with Carousel */}
+                <div 
+                  className="relative aspect-square bg-slate-950 overflow-hidden group/image"
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={() => {
+                    const images = getDreamImages(dream);
+                    handleTouchEnd(dream.id, images);
+                  }}
+                >
+                  {(() => {
+                    const images = getDreamImages(dream);
+                    if (images.length === 0) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
+                          <Sparkles className="text-purple-400/50" size={48} />
+                        </div>
+                      );
+                    }
+                    
+                    const currentIndex = carouselIndices[dream.id] || 0;
+                    const currentImage = images[currentIndex];
+                    
+                    return (
+                      <>
+                        <img
+                          src={currentImage}
+                          alt="Dream visualization"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        
+                        {/* Carousel indicators */}
+                        {images.length > 1 && (
+                          <>
+                            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10">
+                              {images.map((_, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`h-1.5 rounded-full transition-all ${
+                                    idx === currentIndex
+                                      ? 'bg-white w-6'
+                                      : 'bg-white/50 w-1.5'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            
+                            {/* Navigation arrows - desktop only */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (currentIndex > 0) {
+                                  setCarouselIndices({ ...carouselIndices, [dream.id]: currentIndex - 1 });
+                                }
+                              }}
+                              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity md:block hidden"
+                              disabled={currentIndex === 0}
+                            >
+                              <ChevronLeft size={20} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (currentIndex < images.length - 1) {
+                                  setCarouselIndices({ ...carouselIndices, [dream.id]: currentIndex + 1 });
+                                }
+                              }}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity md:block hidden"
+                              disabled={currentIndex === images.length - 1}
+                            >
+                              <ChevronRight size={20} />
+                            </button>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+                  
                   
                   {/* Overlay on hover */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -1069,189 +1208,255 @@ export default function Social() {
           onClick={() => setSelectedDream(null)}
         >
           <div
-            className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6">
-              {/* Header */}
-              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-purple-500/20">
+            {/* Header */}
+            <div className="flex items-center gap-3 p-4 border-b border-purple-500/20 flex-shrink-0">
+              <button
+                onClick={() => {
+                  navigate(`/profile/${selectedDream.user_id}`);
+                  setSelectedDream(null);
+                }}
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform"
+              >
+                {selectedDream.profiles.avatar_url ? (
+                  <img
+                    src={selectedDream.profiles.avatar_url}
+                    alt={selectedDream.profiles.full_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="text-pink-400" size={20} />
+                )}
+              </button>
+              <div className="flex-1">
                 <button
                   onClick={() => {
                     navigate(`/profile/${selectedDream.user_id}`);
                     setSelectedDream(null);
                   }}
-                  className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform"
+                  className="text-left hover:opacity-80 transition-opacity"
                 >
-                  {selectedDream.profiles.avatar_url ? (
-                    <img
-                      src={selectedDream.profiles.avatar_url}
-                      alt={selectedDream.profiles.full_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="text-pink-400" size={24} />
-                  )}
+                  <p className="text-white font-semibold hover:text-purple-300 transition-colors text-sm">{selectedDream.profiles.full_name || t.social.anonymous}</p>
+                  <p className="text-slate-400 text-xs hover:text-purple-400 transition-colors">{formatDate(selectedDream.created_at)}</p>
                 </button>
-                <div className="flex-1">
+              </div>
+              <div className="flex items-center gap-2">
+                {user && selectedDream.user_id === user.id && (
                   <button
-                    onClick={() => {
-                      navigate(`/profile/${selectedDream.user_id}`);
-                      setSelectedDream(null);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteDream(selectedDream.id, e);
                     }}
-                    className="text-left hover:opacity-80 transition-opacity"
+                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    title={t.social.deleteDream}
                   >
-                    <p className="text-white font-semibold hover:text-purple-300 transition-colors">{selectedDream.profiles.full_name || t.social.anonymous}</p>
-                    <p className="text-slate-400 text-sm hover:text-purple-400 transition-colors">{formatDate(selectedDream.created_at)}</p>
+                    <Trash2 size={18} />
                   </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  {user && selectedDream.user_id === user.id && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteDream(selectedDream.id, e);
-                      }}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                      title={t.social.deleteDream}
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setSelectedDream(null)}
-                    className="text-slate-400 hover:text-white transition-colors text-2xl"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              {/* Dream Image */}
-              {selectedDream.image_url && (
-                <div className="mb-6 rounded-xl overflow-hidden">
-                  <img
-                    src={selectedDream.image_url}
-                    alt="Dream visualization"
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              )}
-
-              {/* Dream Text */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-purple-400 mb-2">{t.library.yourDream}</h3>
-                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
-                  {selectedDream.dream_text}
-                </p>
-              </div>
-
-              {/* Analysis */}
-              {selectedDream.analysis_text && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-pink-400 mb-2">{t.library.analysis}</h3>
-                  <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {selectedDream.analysis_text}
-                  </p>
-                </div>
-              )}
-
-              {/* Comments Section */}
-              <div className="border-t border-purple-500/20 pt-6">
-                <h3 className="text-lg font-semibold text-white mb-4">{t.social.comments}</h3>
-                
-                {/* Comment Input */}
-                {user ? (
-                  <div className="mb-6 flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      <User className="text-pink-400" size={16} />
-                    </div>
-                    <div className="flex-1 flex gap-2">
-                      <input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleComment()}
-                        placeholder={t.social.writeComment}
-                        className="flex-1 px-4 py-2 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
-                      />
-                      <button
-                        onClick={handleComment}
-                        disabled={!newComment.trim() || submittingComment}
-                        className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg hover:from-pink-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {submittingComment ? (
-                          <Loader2 className="animate-spin" size={18} />
-                        ) : (
-                          <Send size={18} />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-6 p-4 bg-slate-950/30 rounded-lg text-center">
-                    <p className="text-slate-400 mb-2">{t.social.signInToComment}</p>
-                    <button
-                      onClick={() => {
-                        setSelectedDream(null);
-                        navigate('/signin');
-                      }}
-                      className="text-purple-400 hover:text-purple-300"
-                    >
-                      {t.social.signIn}
-                    </button>
-                  </div>
                 )}
+                <button
+                  onClick={() => setSelectedDream(null)}
+                  className="text-slate-400 hover:text-white transition-colors text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
 
-                {/* Comments List */}
-                {loadingComments ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="animate-spin text-purple-400" size={24} />
+            {/* Horizontal Layout: Image Left, Content Right */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Dream Image - Left Side */}
+              <div className="w-1/2 flex-shrink-0 bg-slate-950 overflow-hidden relative">
+                {(() => {
+                  const images = getDreamImages(selectedDream);
+                  if (images.length === 0) {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
+                        <Sparkles className="text-purple-400/50" size={64} />
+                      </div>
+                    );
+                  }
+                  
+                  const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
+                  const currentImage = images[modalIndex];
+                  
+                  return (
+                    <div>
+                      <img
+                        src={currentImage}
+                        alt="Dream visualization"
+                        className="w-full h-full object-contain"
+                      />
+                      
+                      {/* Carousel indicators for modal */}
+                      {images.length > 1 && (
+                        <>
+                          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+                            {images.map((_, idx) => (
+                              <div
+                                key={idx}
+                                className={`h-2 rounded-full transition-all ${
+                                  idx === modalIndex
+                                    ? 'bg-white w-8'
+                                    : 'bg-white/50 w-2'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Navigation arrows for modal */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (modalIndex > 0) {
+                                setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex - 1 });
+                              }
+                            }}
+                            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
+                            disabled={modalIndex === 0}
+                          >
+                            <ChevronLeft size={24} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (modalIndex < images.length - 1) {
+                                setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex + 1 });
+                              }
+                            }}
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
+                            disabled={modalIndex === images.length - 1}
+                          >
+                            <ChevronRight size={24} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Content Right Side */}
+              <div className="flex-1 flex flex-col overflow-y-auto">
+                <div className="p-6">
+                  {/* Dream Text */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-purple-400 mb-2">{t.library.yourDream}</h3>
+                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                      {selectedDream.dream_text}
+                    </p>
                   </div>
-                ) : comments.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">{t.social.noComments}</p>
-                ) : (
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3 group">
+
+                  {/* Analysis */}
+                  {selectedDream.analysis_text && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-pink-400 mb-2">{t.library.analysis}</h3>
+                      <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                        {selectedDream.analysis_text}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Comments Section */}
+                <div className="border-t border-purple-500/20 pt-6 px-6 pb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">{t.social.comments}</h3>
+                  
+                  {/* Comment Input */}
+                  {user ? (
+                    <div className="mb-6 flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <User className="text-pink-400" size={16} />
+                      </div>
+                      <div className="flex-1 flex gap-2">
+                        <input
+                          type="text"
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleComment()}
+                          placeholder={t.social.writeComment}
+                          className="flex-1 px-4 py-2 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
+                        />
                         <button
-                          onClick={() => navigate(`/profile/${comment.user_id}`)}
-                          className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden flex-shrink-0 hover:border-purple-400/50 transition-colors"
+                          onClick={handleComment}
+                          disabled={!newComment.trim() || submittingComment}
+                          className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg hover:from-pink-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {comment.profiles.avatar_url ? (
-                            <img
-                              src={comment.profiles.avatar_url}
-                              alt={comment.profiles.full_name}
-                              className="w-full h-full object-cover"
-                            />
+                          {submittingComment ? (
+                            <Loader2 className="animate-spin" size={18} />
                           ) : (
-                            <User className="text-pink-400" size={16} />
+                            <Send size={18} />
                           )}
                         </button>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <button
-                              onClick={() => navigate(`/profile/${comment.user_id}`)}
-                              className="text-white font-semibold text-sm hover:text-purple-400 transition-colors"
-                            >
-                              {comment.profiles.full_name || t.social.anonymous}
-                            </button>
-                            <p className="text-slate-500 text-xs">{formatDate(comment.created_at)}</p>
-                            {user && comment.user_id === user.id && (
-                              <button
-                                onClick={() => handleDeleteComment(comment.id)}
-                                className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-red-400"
-                                title={t.social.deleteComment}
-                              >
-                                <X size={14} />
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-slate-300 text-sm">{comment.comment_text}</p>
-                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <div className="mb-6 p-4 bg-slate-950/30 rounded-lg text-center">
+                      <p className="text-slate-400 mb-2">{t.social.signInToComment}</p>
+                      <button
+                        onClick={() => {
+                          setSelectedDream(null);
+                          navigate('/signin');
+                        }}
+                        className="text-purple-400 hover:text-purple-300"
+                      >
+                        {t.social.signIn}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Comments List */}
+                  {loadingComments ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="animate-spin text-purple-400" size={24} />
+                    </div>
+                  ) : comments.length === 0 ? (
+                    <p className="text-slate-400 text-center py-8">{t.social.noComments}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {comments.map((comment) => (
+                        <div key={comment.id} className="flex gap-3 group">
+                          <button
+                            onClick={() => navigate(`/profile/${comment.user_id}`)}
+                            className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden flex-shrink-0 hover:border-purple-400/50 transition-colors"
+                          >
+                            {comment.profiles.avatar_url ? (
+                              <img
+                                src={comment.profiles.avatar_url}
+                                alt={comment.profiles.full_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User className="text-pink-400" size={16} />
+                            )}
+                          </button>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <button
+                                onClick={() => navigate(`/profile/${comment.user_id}`)}
+                                className="text-white font-semibold text-sm hover:text-purple-400 transition-colors"
+                              >
+                                {comment.profiles.full_name || t.social.anonymous}
+                              </button>
+                              <p className="text-slate-500 text-xs">{formatDate(comment.created_at)}</p>
+                              {user && comment.user_id === user.id && (
+                                <button
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-red-400"
+                                  title={t.social.deleteComment}
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-slate-300 text-sm">{comment.comment_text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

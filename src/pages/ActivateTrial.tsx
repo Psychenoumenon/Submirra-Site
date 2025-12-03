@@ -44,6 +44,26 @@ export default function ActivateTrial() {
     }
   };
 
+  // Get user's IP address
+  const getUserIP = async (): Promise<string> => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.error('Error fetching IP address:', error);
+      // Fallback: try another service
+      try {
+        const response = await fetch('https://api64.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+      } catch (fallbackError) {
+        console.error('Error fetching IP from fallback service:', fallbackError);
+        throw new Error('Could not determine IP address');
+      }
+    }
+  };
+
   const activateTrial = async () => {
     if (!user || alreadyUsed) {
       showToast('Kullanıcı bulunamadı veya deneme zaten kullanılmış.', 'error');
@@ -53,6 +73,26 @@ export default function ActivateTrial() {
     setActivating(true);
 
     try {
+      // Get user's IP address
+      const userIP = await getUserIP();
+      
+      // Check if this IP address has already used a trial
+      const { data: ipCheckData, error: ipCheckError } = await supabase.rpc(
+        'check_ip_trial_eligibility',
+        { p_ip_address: userIP }
+      );
+
+      if (ipCheckError) {
+        console.error('Error checking IP eligibility:', ipCheckError);
+        throw new Error(t.trial.ipCheckFailed);
+      }
+
+      // If IP has already used a trial, block the activation
+      if (ipCheckData === false) {
+        showToast(t.trial.ipAlreadyUsed, 'error');
+        setActivating(false);
+        return;
+      }
       // Önce profil var mı kontrol et
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -113,6 +153,20 @@ export default function ActivateTrial() {
       }
 
       console.log('Trial activated successfully:', data);
+
+      // Record the trial activation with IP address
+      const { error: recordError } = await supabase.rpc(
+        'record_trial_activation',
+        {
+          p_ip_address: userIP,
+          p_user_id: user.id
+        }
+      );
+
+      if (recordError) {
+        console.error('Error recording trial activation:', recordError);
+        // Don't fail the whole process if recording fails, but log it
+      }
 
       setActivated(true);
       showToast(t.trial.activated, 'success');

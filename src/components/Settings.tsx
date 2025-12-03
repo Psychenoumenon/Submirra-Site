@@ -36,11 +36,14 @@ export default function Settings() {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [favoriteUsers, setFavoriteUsers] = useState<FavoriteUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showReadReceipts, setShowReadReceipts] = useState(true);
+  const [loadingReadReceipts, setLoadingReadReceipts] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
       loadBlockedUsers();
       loadFavoriteUsers();
+      loadReadReceiptsSetting();
     }
   }, [isOpen, user]);
 
@@ -217,6 +220,48 @@ export default function Settings() {
     } catch (error) {
       console.error('Error removing favorite:', error);
       showToast('Favori kaldırılamadı', 'error');
+    }
+  };
+
+  const loadReadReceiptsSetting = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('show_read_receipts')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setShowReadReceipts(data.show_read_receipts !== false);
+      }
+    } catch (error) {
+      console.error('Error loading read receipts setting:', error);
+    }
+  };
+
+  const updateReadReceipts = async (enabled: boolean) => {
+    if (!user) return;
+    setLoadingReadReceipts(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ show_read_receipts: enabled })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setShowReadReceipts(enabled);
+      showToast(
+        enabled 
+          ? (t.settings.readReceiptsEnabled || 'Read receipts enabled')
+          : (t.settings.readReceiptsDisabled || 'Read receipts disabled'),
+        'success'
+      );
+    } catch (error) {
+      console.error('Error updating read receipts:', error);
+      showToast(t.settings.readReceiptsUpdateError || 'Failed to update read receipts', 'error');
+    } finally {
+      setLoadingReadReceipts(false);
     }
   };
 
@@ -432,6 +477,24 @@ export default function Settings() {
                           <option>{t.settings.everyone}</option>
                           <option>{t.settings.followingOnly}</option>
                         </select>
+                      </label>
+                    </div>
+                    <div className="p-2.5 bg-slate-950/30 rounded-lg">
+                      <label className="flex items-center justify-between cursor-pointer">
+                        <div className="flex-1">
+                          <span className="text-white text-sm block">{t.settings.showReadReceipts || 'Show Read Receipts'}</span>
+                          <span className="text-slate-400 text-xs block mt-0.5">{t.settings.showReadReceiptsDesc || 'Let others know when you\'ve seen their messages'}</span>
+                        </div>
+                        {loadingReadReceipts ? (
+                          <Loader2 className="animate-spin text-purple-400" size={20} />
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={showReadReceipts}
+                            onChange={(e) => updateReadReceipts(e.target.checked)}
+                            className="w-5 h-5 rounded cursor-pointer"
+                          />
+                        )}
                       </label>
                     </div>
                   </div>

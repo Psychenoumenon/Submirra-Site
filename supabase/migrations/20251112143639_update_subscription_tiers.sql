@@ -3,7 +3,7 @@
 
   1. Changes to subscriptions table
     - Add `plan_type` column (trial, standard, premium)
-    - Add `monthly_library_limit` column for standard plan (5 analyses)
+    - Add `monthly_library_limit` column for standard plan (90 analyses per month)
     - Add `daily_analysis_limit` column (3 for trial/standard, 10 for premium)
     - Add `visualizations_per_analysis` column (1 for standard, 3 for premium)
     
@@ -72,7 +72,10 @@ SET
   END,
   daily_analysis_limit = 3,
   visualizations_per_analysis = 1,
-  monthly_library_limit = 5
+  monthly_library_limit = CASE 
+    WHEN status = 'trial' THEN NULL
+    ELSE 90
+  END
 WHERE plan_type IS NULL;
 
 -- Create library_items table if not exists
@@ -134,7 +137,7 @@ BEGIN
     END,
     monthly_library_limit = CASE 
       WHEN p_plan_type = 'trial' THEN NULL
-      WHEN p_plan_type = 'standard' THEN 5
+      WHEN p_plan_type = 'standard' THEN 90
       WHEN p_plan_type = 'premium' THEN NULL
     END,
     status = CASE 

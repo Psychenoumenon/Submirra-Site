@@ -77,8 +77,17 @@ interface Translations {
     analyzeFirst: string;
     yourDream: string;
     analysis: string;
-    pending: string;
-    processingMessage: string;
+      pending: string;
+      processingMessage: string;
+      creating: string;
+      searchPlaceholder: string;
+    noDreamsFound: string;
+    download: string;
+    makePrivate: string;
+    makePublic: string;
+    addToFavorites: string;
+    removeFromFavorites: string;
+    delete: string;
   };
   social: {
     title: string;
@@ -158,10 +167,11 @@ interface Translations {
     dangerLow: string;
     dangerMedium: string;
     dangerHigh: string;
-    dangerCritical: string;
-    noFollowers: string;
-    noFollowing: string;
-  };
+      dangerCritical: string;
+      noFollowers: string;
+      noFollowing: string;
+      developer: string;
+    };
   dashboard: {
     title: string;
     subtitle: string;
@@ -218,6 +228,12 @@ interface Translations {
     validationEmail: string;
     emailAlreadyExists: string;
     invalidCredentials: string;
+    acceptTerms: string;
+    acceptPrivacy: string;
+    mustAcceptTerms: string;
+    mustAcceptPrivacy: string;
+    readTerms: string;
+    readPrivacy: string;
   };
   settings: {
     title: string;
@@ -245,6 +261,11 @@ interface Translations {
     favoritesDesc: string;
     noFavorites: string;
     remove: string;
+    showReadReceipts: string;
+    showReadReceiptsDesc: string;
+    readReceiptsEnabled: string;
+    readReceiptsDisabled: string;
+    readReceiptsUpdateError: string;
   };
   messages: {
     title: string;
@@ -257,6 +278,12 @@ interface Translations {
     searchResults: string;
     searching: string;
     deleteConversation: string;
+  };
+  notifications: {
+    deleteAll: string;
+    deleteAllConfirm: string;
+    deleteAllSuccess: string;
+    deleteAllError: string;
   };
   pricing: {
     title: string;
@@ -326,9 +353,12 @@ interface Translations {
     startAnalyzing: string;
     trialExpired: string;
     trialExpiredDesc: string;
+    ipAlreadyUsed: string;
+    ipCheckFailed: string;
   };
   footer: {
     termsOfService: string;
+    privacyPolicy: string;
     feedback: string;
   };
   terms: {
@@ -382,6 +412,46 @@ interface Translations {
     thankYou: string;
     thankYouMessage: string;
     privacyNote: string;
+  };
+  privacy: {
+    title: string;
+    lastUpdated: string;
+    introductionTitle: string;
+    introductionText: string;
+    dataCollectionTitle: string;
+    dataCollectionText: string;
+    dataCollectionItem1: string;
+    dataCollectionItem2: string;
+    dataCollectionItem3: string;
+    dataCollectionItem4: string;
+    dataUsageTitle: string;
+    dataUsageText: string;
+    dataUsageItem1: string;
+    dataUsageItem2: string;
+    dataUsageItem3: string;
+    dataUsageItem4: string;
+    dataStorageTitle: string;
+    dataStorageText: string;
+    dataSecurityTitle: string;
+    dataSecurityText: string;
+    dataSecurityItem1: string;
+    dataSecurityItem2: string;
+    dataSecurityItem3: string;
+    userRightsTitle: string;
+    userRightsText: string;
+    userRightsItem1: string;
+    userRightsItem2: string;
+    userRightsItem3: string;
+    userRightsItem4: string;
+    cookiesTitle: string;
+    cookiesText: string;
+    thirdPartyTitle: string;
+    thirdPartyText: string;
+    changesTitle: string;
+    changesText: string;
+    contactTitle: string;
+    contactText: string;
+    contactLink: string;
   };
 }
 
@@ -466,8 +536,20 @@ const translations: Record<Language, Translations> = {
       analysis: 'Analysis',
       pending: 'Pending Analysis',
       processingMessage: 'Analysis is being processed',
+      creating: 'Creating...',
       searchPlaceholder: 'Search your dreams...',
       noDreamsFound: 'No dreams found matching your search',
+      download: 'Download',
+      makePrivate: 'Make Private',
+      makePublic: 'Make Public',
+      addToFavorites: 'Add to Favorites',
+      removeFromFavorites: 'Remove from Favorites',
+      delete: 'Delete',
+      downloadSuccess: 'Image downloaded successfully',
+      downloadError: 'Failed to download image',
+      imageNotFound: 'Image not found',
+      privacyUpdated: 'Privacy setting updated',
+      privacyUpdateError: 'Failed to update privacy setting',
     },
     social: {
       title: 'Social Feed',
@@ -486,7 +568,7 @@ const translations: Record<Language, Translations> = {
       shareFirst: 'Share Your First Dream',
       likes: 'likes',
       like: 'like',
-      comments: 'comments',
+      comments: 'Comments',
       comment: 'comment',
       viewAll: 'View all',
       noComments: 'No comments yet',
@@ -550,6 +632,7 @@ const translations: Record<Language, Translations> = {
       dangerCritical: 'Critical Risk',
       noFollowers: 'No followers yet',
       noFollowing: 'Not following anyone yet',
+      developer: 'Developer',
     },
     dashboard: {
       title: 'Dashboard',
@@ -607,6 +690,12 @@ const translations: Record<Language, Translations> = {
       validationEmail: 'Please enter a valid email address',
       emailAlreadyExists: 'This email is already registered. Please sign in or use a different email.',
       invalidCredentials: 'Invalid email or password. Please try again.',
+      acceptTerms: 'I accept the Terms of Service',
+      acceptPrivacy: 'I accept the Privacy Policy',
+      mustAcceptTerms: 'You must accept the Terms of Service to create an account',
+      mustAcceptPrivacy: 'You must accept the Privacy Policy to create an account',
+      readTerms: 'Read Terms of Service',
+      readPrivacy: 'Read Privacy Policy',
     },
     settings: {
       title: 'Settings',
@@ -646,6 +735,14 @@ const translations: Record<Language, Translations> = {
       searchResults: 'Search Results',
       searching: 'Searching...',
       deleteConversation: 'Delete Conversation',
+      reply: 'Reply',
+      replyPlaceholder: 'Type your reply...',
+    },
+    notifications: {
+      deleteAll: 'Delete All',
+      deleteAllConfirm: 'Are you sure you want to delete all notifications?',
+      deleteAllSuccess: 'All notifications deleted',
+      deleteAllError: 'Failed to delete all notifications',
     },
     pricing: {
       title: 'Simple, Transparent Pricing',
@@ -668,9 +765,9 @@ const translations: Record<Language, Translations> = {
         description: 'Great for regular dream journaling and insights',
         feature1: '3 dream analyses per day',
         feature2: '1 visualization per analysis',
-        feature3: 'Library resets each month',
+        feature3: '90 dreams storage per month',
         feature4: 'Advanced analysis',
-        feature5: 'Storage refreshes each month',
+        feature5: '',
         cta: 'Get Standard',
       },
       premium: {
@@ -715,9 +812,12 @@ const translations: Record<Language, Translations> = {
       startAnalyzing: 'Start Analyzing Dreams',
       trialExpired: 'Trial Expired',
       trialExpiredDesc: 'Your 3-day free trial has expired. Upgrade to continue.',
+      ipAlreadyUsed: 'This IP address has already used a free trial. Each person can only get one free trial.',
+      ipCheckFailed: 'Could not verify eligibility. Please try again.',
     },
     footer: {
       termsOfService: 'Terms of Service',
+      privacyPolicy: 'Privacy Policy',
       feedback: 'Feedback',
     },
     terms: {
@@ -771,6 +871,46 @@ const translations: Record<Language, Translations> = {
       thankYou: 'Thank You!',
       thankYouMessage: 'Your feedback has been received and will be reviewed by our team.',
       privacyNote: 'Your feedback is private and will only be viewed by the Submirra team.',
+    },
+    privacy: {
+      title: 'Privacy Policy',
+      lastUpdated: 'Last updated: December 2024',
+      introductionTitle: '1. Introduction',
+      introductionText: 'At Submirra, we take your privacy seriously. This Privacy Policy explains how we collect, use, store, and protect your personal information when you use our dream analysis platform. We are committed to maintaining the highest standards of data protection and transparency.',
+      dataCollectionTitle: '2. Information We Collect',
+      dataCollectionText: 'We collect information that is necessary to provide you with our services:',
+      dataCollectionItem1: 'Account information: email address, username, and password (encrypted)',
+      dataCollectionItem2: 'Profile information: full name, bio, and avatar (optional)',
+      dataCollectionItem3: 'Dream content: your dream descriptions and analysis results',
+      dataCollectionItem4: 'Usage data: subscription information, preferences, and interaction history',
+      dataUsageTitle: '3. How We Use Your Information',
+      dataUsageText: 'We use your information solely to provide and improve our services:',
+      dataUsageItem1: 'To process and analyze your dreams using our advanced technology',
+      dataUsageItem2: 'To generate personalized visualizations based on your dream content',
+      dataUsageItem3: 'To manage your account, subscriptions, and preferences',
+      dataUsageItem4: 'To communicate with you about your account, updates, and important notices',
+      dataStorageTitle: '4. Data Storage and Retention',
+      dataStorageText: 'Your data is stored securely with industry-standard encryption. We retain your information for as long as your account is active or as needed to provide our services. You can delete your account and all associated data at any time from your profile settings.',
+      dataSecurityTitle: '5. Data Security',
+      dataSecurityText: 'We implement robust security measures to protect your information:',
+      dataSecurityItem1: 'All data is encrypted in transit and at rest using advanced encryption protocols',
+      dataSecurityItem2: 'Access to your data is restricted to authorized personnel only',
+      dataSecurityItem3: 'We regularly monitor our systems for security vulnerabilities and update our security practices',
+      userRightsTitle: '6. Your Rights and Choices',
+      userRightsText: 'You have full control over your personal information:',
+      userRightsItem1: 'Access: You can view and download your data at any time',
+      userRightsItem2: 'Modify: You can update your profile information, username, and password',
+      userRightsItem3: 'Delete: You can delete your account and all associated data permanently',
+      userRightsItem4: 'Privacy: You can control the visibility of your dreams (public or private)',
+      cookiesTitle: '7. Cookies and Tracking',
+      cookiesText: 'We use essential cookies to maintain your session and provide core functionality. We do not use tracking cookies or third-party analytics that collect personal information without your consent.',
+      thirdPartyTitle: '8. Third-Party Services',
+      thirdPartyText: 'We use secure third-party services for data storage, authentication, and dream analysis processing. These services are bound by strict privacy agreements and only process your data as necessary to provide our services. We do not sell or share your personal information with any other third parties.',
+      changesTitle: '9. Changes to This Policy',
+      changesText: 'We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements. We will notify you of any significant changes by posting the updated policy on this page and updating the "Last updated" date.',
+      contactTitle: '10. Contact Us',
+      contactText: 'If you have any questions, concerns, or requests regarding this Privacy Policy or your personal information, please visit our',
+      contactLink: 'contact page',
     },
   },
   tr: {
@@ -853,8 +993,20 @@ const translations: Record<Language, Translations> = {
       analysis: 'Analiz',
       pending: 'Analiz Bekleniyor',
       processingMessage: 'Analiz işleniyor',
+      creating: 'Oluşturuluyor...',
       searchPlaceholder: 'Rüyalarınızda arayın...',
       noDreamsFound: 'Aramanızla eşleşen rüya bulunamadı',
+      download: 'İndir',
+      makePrivate: 'Özel Yap',
+      makePublic: 'Herkese Aç',
+      addToFavorites: 'Favorilere Ekle',
+      removeFromFavorites: 'Favorilerden Çıkar',
+      delete: 'Sil',
+      downloadSuccess: 'Görsel başarıyla indirildi',
+      downloadError: 'Görsel indirilemedi',
+      imageNotFound: 'Görsel bulunamadı',
+      privacyUpdated: 'Gizlilik ayarı güncellendi',
+      privacyUpdateError: 'Gizlilik ayarı değiştirilemedi',
     },
     social: {
       title: 'Sosyal Akış',
@@ -873,7 +1025,7 @@ const translations: Record<Language, Translations> = {
       shareFirst: 'İlk Rüyanızı Paylaşın',
       likes: 'beğeni',
       like: 'beğeni',
-      comments: 'yorum',
+      comments: 'Yorumlar',
       comment: 'yorum',
       viewAll: 'Tümünü gör',
       noComments: 'Henüz yorum yok',
@@ -937,6 +1089,7 @@ const translations: Record<Language, Translations> = {
       dangerCritical: 'Kritik Risk',
       noFollowers: 'Henüz takipçi yok',
       noFollowing: 'Henüz kimseyi takip etmiyor',
+      developer: 'Developer',
     },
     dashboard: {
       title: 'Kontrol Paneli',
@@ -978,12 +1131,12 @@ const translations: Record<Language, Translations> = {
       startJourney: 'Bilinçaltına yolculuğunuza başlayın',
       signIn: 'Giriş Yap',
       signUp: 'Kaydol',
-      fullName: 'Ad Soyad',
+      fullName: 'Adınız',
       email: 'E-posta',
       password: 'Şifre',
       orContinueWith: 'Veya şununla devam et',
       googleSignIn: 'Google ile giriş yap',
-      enterFullName: 'Ad soyadınızı girin',
+      enterFullName: 'Adınızı girin',
       enterEmail: 'eposta@ornek.com',
       enterPassword: 'Şifrenizi girin',
       creatingAccount: 'Hesap oluşturuluyor...',
@@ -994,6 +1147,12 @@ const translations: Record<Language, Translations> = {
       validationEmail: 'Lütfen geçerli bir e-posta adresi girin',
       emailAlreadyExists: 'Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta kullanın.',
       invalidCredentials: 'Geçersiz e-posta veya şifre. Lütfen tekrar deneyin.',
+      acceptTerms: 'Hizmet Şartlarını kabul ediyorum',
+      acceptPrivacy: 'Gizlilik Politikasını kabul ediyorum',
+      mustAcceptTerms: 'Hesap oluşturmak için Hizmet Şartlarını kabul etmelisiniz',
+      mustAcceptPrivacy: 'Hesap oluşturmak için Gizlilik Politikasını kabul etmelisiniz',
+      readTerms: 'Hizmet Şartlarını Oku',
+      readPrivacy: 'Gizlilik Politikasını Oku',
     },
     settings: {
       title: 'Ayarlar',
@@ -1021,6 +1180,11 @@ const translations: Record<Language, Translations> = {
       favoritesDesc: 'Favori arkadaşlarınız. Bu kullanıcıların rüyaları öncelikli olarak gösterilir.',
       noFavorites: 'Henüz favori arkadaşınız yok',
       remove: 'Çıkar',
+      showReadReceipts: 'Görüldü Bilgisi',
+      showReadReceiptsDesc: 'Diğer kullanıcıların mesajlarınızı görüp görmediğini bilmelerine izin verin',
+      readReceiptsEnabled: 'Görüldü bilgisi açıldı',
+      readReceiptsDisabled: 'Görüldü bilgisi kapatıldı',
+      readReceiptsUpdateError: 'Görüldü bilgisi ayarı güncellenemedi',
     },
     messages: {
       title: 'Mesajlar',
@@ -1033,6 +1197,12 @@ const translations: Record<Language, Translations> = {
       searchResults: 'Arama Sonuçları',
       searching: 'Aranıyor...',
       deleteConversation: 'Sohbeti Sil',
+    },
+    notifications: {
+      deleteAll: 'Bütün Bildirimleri Sil',
+      deleteAllConfirm: 'Tüm bildirimleri silmek istediğinizden emin misiniz?',
+      deleteAllSuccess: 'Tüm bildirimler silindi',
+      deleteAllError: 'Bildirimler silinemedi',
     },
     pricing: {
       title: 'Basit ve Şeffaf Fiyatlandırma',
@@ -1055,9 +1225,9 @@ const translations: Record<Language, Translations> = {
         description: 'Düzenli rüya günlüğü ve içgörüler için harika',
         feature1: 'Günde 3 rüya analizi',
         feature2: 'Analiz başına 1 görselleştirme',
-        feature3: 'Her ay kütüphane silinir',
+        feature3: 'Aylık 90 rüya saklama kapasitesi',
         feature4: 'Gelişmiş analiz',
-        feature5: 'Her ay yeni depolama alanı',
+        feature5: '',
         cta: 'Standart Al',
       },
       premium: {
@@ -1102,9 +1272,12 @@ const translations: Record<Language, Translations> = {
       startAnalyzing: 'Rüya Analizine Başla',
       trialExpired: 'Deneme Süresi Doldu',
       trialExpiredDesc: '3 günlük ücretsiz denemeniz sona erdi. Devam etmek için yükseltin.',
+      ipAlreadyUsed: 'Bu IP adresinden daha önce ücretsiz deneme kullanılmış. Her kişi yalnızca bir kez ücretsiz deneme alabilir.',
+      ipCheckFailed: 'Uygunluk kontrolü yapılamadı. Lütfen tekrar deneyin.',
     },
     footer: {
       termsOfService: 'Hizmet Şartları',
+      privacyPolicy: 'Gizlilik Politikası',
       feedback: 'Geri Bildirim',
     },
     terms: {
@@ -1158,6 +1331,46 @@ const translations: Record<Language, Translations> = {
       thankYou: 'Teşekkürler!',
       thankYouMessage: 'Geri bildiriminiz alındı ve ekibimiz tarafından incelenecektir.',
       privacyNote: 'Geri bildiriminiz gizlidir ve yalnızca Submirra ekibi tarafından görüntülenecektir.',
+    },
+    privacy: {
+      title: 'Gizlilik Politikası',
+      lastUpdated: 'Son güncelleme: Aralık 2024',
+      introductionTitle: '1. Giriş',
+      introductionText: 'Submirra\'da gizliliğinize önem veriyoruz. Bu Gizlilik Politikası, rüya analizi platformumuzu kullandığınızda kişisel bilgilerinizi nasıl topladığımızı, kullandığımızı, sakladığımızı ve koruduğumuzu açıklar. En yüksek veri koruma ve şeffaflık standartlarını sürdürmeye kararlıyız.',
+      dataCollectionTitle: '2. Topladığımız Bilgiler',
+      dataCollectionText: 'Size hizmetlerimizi sunmak için gerekli bilgileri topluyoruz:',
+      dataCollectionItem1: 'Hesap bilgileri: e-posta adresi, kullanıcı adı ve şifre (şifrelenmiş)',
+      dataCollectionItem2: 'Profil bilgileri: ad soyad, biyografi ve avatar (isteğe bağlı)',
+      dataCollectionItem3: 'Rüya içeriği: rüya açıklamalarınız ve analiz sonuçları',
+      dataCollectionItem4: 'Kullanım verileri: abonelik bilgileri, tercihler ve etkileşim geçmişi',
+      dataUsageTitle: '3. Bilgilerinizi Nasıl Kullanıyoruz',
+      dataUsageText: 'Bilgilerinizi yalnızca hizmetlerimizi sunmak ve iyileştirmek için kullanıyoruz:',
+      dataUsageItem1: 'Gelişmiş teknolojimizi kullanarak rüyalarınızı işlemek ve analiz etmek',
+      dataUsageItem2: 'Rüya içeriğinize dayalı kişiselleştirilmiş görselleştirmeler oluşturmak',
+      dataUsageItem3: 'Hesabınızı, aboneliklerinizi ve tercihlerinizi yönetmek',
+      dataUsageItem4: 'Hesabınız, güncellemeler ve önemli bildirimler hakkında sizinle iletişim kurmak',
+      dataStorageTitle: '4. Veri Depolama ve Saklama',
+      dataStorageText: 'Verileriniz endüstri standardı şifreleme ile Supabase sunucularında güvenli bir şekilde saklanır. Hesabınız aktif olduğu sürece veya hizmetlerimizi sunmak için gerekli olduğu sürece bilgilerinizi saklarız. Hesabınızı ve tüm ilişkili verileri istediğiniz zaman profil ayarlarınızdan silebilirsiniz.',
+      dataSecurityTitle: '5. Veri Güvenliği',
+      dataSecurityText: 'Bilgilerinizi korumak için güçlü güvenlik önlemleri uyguluyoruz:',
+      dataSecurityItem1: 'Tüm veriler, gelişmiş şifreleme protokolleri kullanılarak aktarım sırasında ve beklerken şifrelenir',
+      dataSecurityItem2: 'Verilerinize erişim yalnızca yetkili personelle sınırlıdır',
+      dataSecurityItem3: 'Sistemlerimizi düzenli olarak güvenlik açıkları için izliyor ve güvenlik uygulamalarımızı güncelliyoruz',
+      userRightsTitle: '6. Haklarınız ve Seçenekleriniz',
+      userRightsText: 'Kişisel bilgileriniz üzerinde tam kontrolünüz var:',
+      userRightsItem1: 'Erişim: Verilerinizi istediğiniz zaman görüntüleyebilir ve indirebilirsiniz',
+      userRightsItem2: 'Değiştirme: Profil bilgilerinizi, kullanıcı adınızı ve şifrenizi güncelleyebilirsiniz',
+      userRightsItem3: 'Silme: Hesabınızı ve tüm ilişkili verileri kalıcı olarak silebilirsiniz',
+      userRightsItem4: 'Gizlilik: Rüyalarınızın görünürlüğünü kontrol edebilirsiniz (herkese açık veya özel)',
+      cookiesTitle: '7. Çerezler ve İzleme',
+      cookiesText: 'Oturumunuzu sürdürmek ve temel işlevselliği sağlamak için gerekli çerezleri kullanıyoruz. Kişisel bilgi toplayan izleme çerezleri veya üçüncü taraf analitik araçları kullanmıyoruz.',
+      thirdPartyTitle: '8. Üçüncü Taraf Hizmetler',
+      thirdPartyText: 'Güvenli veri depolama, kimlik doğrulama ve rüya analizi işleme için güvenilir üçüncü taraf hizmetler kullanıyoruz. Bu hizmetler katı gizlilik anlaşmalarıyla bağlıdır ve verilerinizi yalnızca hizmetlerimizi sunmak için gerekli olduğu şekilde işler. Kişisel bilgilerinizi başka hiçbir üçüncü taraf ile satmıyor veya paylaşmıyoruz.',
+      changesTitle: '9. Bu Politikanın Değişiklikleri',
+      changesText: 'Uygulamalarımızdaki veya yasal gerekliliklerdeki değişiklikleri yansıtmak için bu Gizlilik Politikasını zaman zaman güncelleyebiliriz. Önemli değişikliklerden, güncellenmiş politikayı bu sayfada yayınlayarak ve "Son güncelleme" tarihini güncelleyerek sizi bilgilendireceğiz.',
+      contactTitle: '10. Bize Ulaşın',
+      contactText: 'Bu Gizlilik Politikası veya kişisel bilgileriniz hakkında herhangi bir sorunuz, endişeniz veya talebiniz varsa, lütfen',
+      contactLink: 'iletişim sayfamızı',
     },
   },
 };

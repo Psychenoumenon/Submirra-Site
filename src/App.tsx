@@ -18,6 +18,7 @@ import Social from './pages/Social';
 import ActivateTrial from './pages/ActivateTrial';
 import Messages from './pages/Messages';
 import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Feedback from './pages/Feedback';
 
 function AppContent() {
@@ -56,6 +57,8 @@ function AppContent() {
         return <Messages />;
       case '/terms':
         return <TermsOfService />;
+      case '/privacy':
+        return <PrivacyPolicy />;
       case '/feedback':
         return <Feedback />;
       case '/signin':

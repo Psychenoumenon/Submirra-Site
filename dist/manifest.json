@@ -1,5 +1,5 @@
 {
-  "name": "Submirra - AI Dream Visualizer",
+  "name": "Submirra",
   "short_name": "Submirra",
   "description": "AI-powered dream analysis and visualization platform",
   "start_url": "/",
@@ -54,4 +54,5 @@
     }
   ]
 }
+
 

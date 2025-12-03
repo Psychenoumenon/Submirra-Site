@@ -13,6 +13,8 @@ export default function SignIn() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -95,6 +97,16 @@ export default function SignIn() {
         if (username.length < 3) {
           throw new Error('Username must be at least 3 characters');
         }
+        if (!acceptedTerms) {
+          setError(t.auth.mustAcceptTerms);
+          setLoading(false);
+          return;
+        }
+        if (!acceptedPrivacy) {
+          setError(t.auth.mustAcceptPrivacy);
+          setLoading(false);
+          return;
+        }
         const { error } = await signUp(email, password, fullName, username);
         if (error) {
           console.error('SignUp UI Error:', error);
@@ -168,6 +180,8 @@ export default function SignIn() {
               onClick={() => {
                 setIsSignUp(false);
                 setError(null);
+                setAcceptedTerms(false);
+                setAcceptedPrivacy(false);
               }}
               className={`flex-1 py-2.5 md:py-3 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
                 !isSignUp
@@ -181,6 +195,8 @@ export default function SignIn() {
               onClick={() => {
                 setIsSignUp(true);
                 setError(null);
+                setAcceptedTerms(false);
+                setAcceptedPrivacy(false);
               }}
               className={`flex-1 py-2.5 md:py-3 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
                 isSignUp
@@ -266,6 +282,55 @@ export default function SignIn() {
                 minLength={6}
               />
             </div>
+
+            {isSignUp && (
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="acceptTerms"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-purple-500/30 bg-slate-950/50 text-purple-600 focus:ring-purple-500/50 focus:ring-2 cursor-pointer"
+                  />
+                  <label htmlFor="acceptTerms" className="text-slate-300 text-sm md:text-base cursor-pointer flex-1">
+                    {t.auth.acceptTerms}{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate('/terms');
+                      }}
+                      className="text-purple-400 hover:text-purple-300 underline transition-colors"
+                    >
+                      ({t.auth.readTerms})
+                    </button>
+                  </label>
+                </div>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="acceptPrivacy"
+                    checked={acceptedPrivacy}
+                    onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-purple-500/30 bg-slate-950/50 text-purple-600 focus:ring-purple-500/50 focus:ring-2 cursor-pointer"
+                  />
+                  <label htmlFor="acceptPrivacy" className="text-slate-300 text-sm md:text-base cursor-pointer flex-1">
+                    {t.auth.acceptPrivacy}{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate('/privacy');
+                      }}
+                      className="text-purple-400 hover:text-purple-300 underline transition-colors"
+                    >
+                      ({t.auth.readPrivacy})
+                    </button>
+                  </label>
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"

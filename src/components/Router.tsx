@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-type Page = '/' | '/about' | '/contact' | '/analyze' | '/library' | '/pricing' | '/profile' | '/signin' | '/signup' | '/dashboard' | '/social' | '/activate-trial' | '/messages';
+type Page = '/' | '/about' | '/contact' | '/analyze' | '/library' | '/pricing' | '/profile' | '/signin' | '/signup' | '/dashboard' | '/social' | '/activate-trial' | '/messages' | '/terms' | '/privacy' | '/feedback';
+
+// Valid routes that should be handled
+const VALID_ROUTES: Page[] = ['/', '/about', '/contact', '/analyze', '/library', '/pricing', '/profile', '/signin', '/signup', '/dashboard', '/social', '/activate-trial', '/messages', '/terms', '/privacy', '/feedback'];
 
 interface RouterContextType {
   currentPage: Page;
@@ -19,13 +22,24 @@ export function RouterProvider({ children }: { children: ReactNode }) {
       const path = window.location.pathname;
       const basePath = path.split('/')[1];
       
+      let targetPage: Page = '/';
+      
       if (basePath === '' || basePath === undefined) {
-        setCurrentPage('/');
+        targetPage = '/';
       } else if (path.startsWith('/profile/')) {
-        setCurrentPage('/profile' as Page);
+        targetPage = '/profile';
       } else {
-        setCurrentPage(`/${basePath}` as Page);
+        const route = `/${basePath}` as Page;
+        // Check if route is valid, otherwise default to home
+        if (VALID_ROUTES.includes(route)) {
+          targetPage = route;
+        } else {
+          // Invalid route - redirect to home but keep URL for user to see
+          targetPage = '/';
+        }
       }
+      
+      setCurrentPage(targetPage);
       
       // Force scroll to top
       window.scrollTo(0, 0);

@@ -17,6 +17,12 @@ export default function Footer() {
               {t.footer.termsOfService}
             </button>
             <button
+              onClick={() => navigate('/privacy')}
+              className="text-slate-400 hover:text-purple-400 transition-colors"
+            >
+              {t.footer.privacyPolicy}
+            </button>
+            <button
               onClick={() => navigate('/feedback')}
               className="text-slate-400 hover:text-purple-400 transition-colors"
             >
@@ -31,4 +37,5 @@ export default function Footer() {
     </footer>
   );
 }
+
 

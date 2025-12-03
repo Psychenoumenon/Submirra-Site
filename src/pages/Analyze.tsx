@@ -26,6 +26,25 @@ export default function Analyze() {
 
   async function sendDreamToN8N(dreamText: string, userId: string) {
     try {
+      // Get user's subscription info to determine visualization count
+      let planType = 'trial';
+      let visualizationsPerAnalysis = 1;
+      
+      try {
+        const { data: subscription, error: subError } = await supabase
+          .from('subscriptions')
+          .select('plan_type, visualizations_per_analysis')
+          .eq('user_id', userId)
+          .single();
+        
+        if (!subError && subscription) {
+          planType = subscription.plan_type || 'trial';
+          visualizationsPerAnalysis = subscription.visualizations_per_analysis || 1;
+        }
+      } catch (subError) {
+        console.warn('Could not fetch subscription info, using defaults:', subError);
+      }
+
       const res = await fetch("https://borablt.app.n8n.cloud/webhook/dream-webhook", {
         method: "POST",
         headers: {
@@ -33,7 +52,9 @@ export default function Analyze() {
         },
         body: JSON.stringify({
           user_id: userId,
-          dream_text: dreamText
+          dream_text: dreamText,
+          plan_type: planType,
+          visualizations_per_analysis: visualizationsPerAnalysis
         })
       });
 
@@ -55,6 +76,35 @@ export default function Analyze() {
     setError(null);
 
     try {
+      // Check if user can submit analysis (trial expired check)
+      const { data: canSubmit, error: checkError } = await supabase.rpc('can_user_submit_analysis', {
+        p_user_id: user.id
+      });
+
+      if (checkError) {
+        console.error('Error checking analysis permission:', checkError);
+        // Continue anyway, but log the error
+      } else if (canSubmit === false) {
+        setError('Trial süreniz dolmuş. Analiz yapmak için lütfen standart veya premium paket satın alın.');
+        showToast('Trial süreniz dolmuş. Paket satın almak için Pricing sayfasına gidin.', 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check trial analysis limit (for trial users)
+      const { data: trialLimitOk, error: trialLimitError } = await supabase.rpc('check_trial_analysis_limit', {
+        p_user_id: user.id
+      });
+
+      if (trialLimitError) {
+        console.error('Error checking trial limit:', trialLimitError);
+      } else if (trialLimitOk === false) {
+        setError('Trial analiz hakkınız dolmuş. Daha fazla analiz için lütfen standart veya premium paket satın alın.');
+        showToast('Trial analiz hakkınız dolmuş. Paket satın almak için Pricing sayfasına gidin.', 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
       // First, save to database
       const insertData: any = {
         user_id: user.id,
@@ -87,6 +137,16 @@ export default function Analyze() {
         } else {
           throw insertError;
         }
+      }
+
+      // Increment trial analyses used (if trial user)
+      try {
+        await supabase.rpc('increment_trial_analyses_used', {
+          p_user_id: user.id
+        });
+      } catch (trialIncrementError) {
+        // Log error but don't fail the submission
+        console.error("Failed to increment trial analyses:", trialIncrementError);
       }
 
       // Then send to N8N webhook

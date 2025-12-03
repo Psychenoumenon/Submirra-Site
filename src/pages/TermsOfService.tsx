@@ -17,9 +17,6 @@ export default function TermsOfService() {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent py-2 leading-tight px-2">
             {t.terms.title}
           </h1>
-          <p className="text-slate-400 text-base md:text-lg px-2">
-            {t.terms.lastUpdated}
-          </p>
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 md:p-8 space-y-6 md:space-y-8 animate-fade-in-delay">
@@ -60,7 +57,31 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-xl md:text-2xl font-semibold text-white mb-4">{t.terms.privacyTitle}</h2>
-            <p className="text-slate-300 leading-relaxed">{t.terms.privacyText}</p>
+            <p className="text-slate-300 leading-relaxed">
+              {t.terms.privacyText.includes('Privacy Policy') ? (
+                <>
+                  Your privacy is important to us. Please review our{' '}
+                  <button
+                    onClick={() => navigate('/privacy')}
+                    className="text-purple-400 hover:text-purple-300 transition-colors underline"
+                  >
+                    Privacy Policy
+                  </button>
+                  , which also governs your use of the service, to understand our practices.
+                </>
+              ) : (
+                <>
+                  Gizliliğiniz bizim için önemlidir. Uygulamalarımızı anlamak için lütfen hizmetin kullanımınızı da yöneten{' '}
+                  <button
+                    onClick={() => navigate('/privacy')}
+                    className="text-purple-400 hover:text-purple-300 transition-colors underline"
+                  >
+                    Gizlilik Politikamızı
+                  </button>
+                  {' '}inceleyin.
+                </>
+              )}
+            </p>
           </section>
 
           <section>

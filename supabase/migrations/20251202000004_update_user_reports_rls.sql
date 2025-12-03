@@ -38,3 +38,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION get_user_report_count(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_user_report_count(uuid) TO anon;
 
+

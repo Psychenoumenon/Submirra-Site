@@ -59,3 +59,4 @@ CREATE TRIGGER trigger_check_user_suspension
   FOR EACH ROW
   EXECUTE FUNCTION check_user_suspension();
 
+

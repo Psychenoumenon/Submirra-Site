@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, ArrowLeft, Loader2, Search, MessageCircle, Trash2, Ban, MoreVertical } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Send, User, ArrowLeft, Loader2, Search, MessageCircle, Trash2, Ban, MoreVertical, Reply, Check, CheckCheck, X } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -11,7 +11,10 @@ interface Message {
   receiver_id: string;
   message_text: string;
   read_at: string | null;
+  seen_at: string | null;
+  reply_to: string | null;
   created_at: string;
+  reply_message?: Message | null; // For displaying replied message
 }
 
 interface Conversation {
@@ -45,17 +48,244 @@ export default function Messages() {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [searching, setSearching] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [showReadReceipts, setShowReadReceipts] = useState(true);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<Conversation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/signin');
-      return;
-    }
+    try {
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+
+      // Define loadConversations inline to avoid dependency issues
+      const loadConversations = async () => {
+      if (!user) return;
+
+      try {
+        // Get hidden conversations from localStorage
+        const hiddenListKey = `hidden_conversations_${user.id}`;
+        const hiddenConversations = new Set<string>(JSON.parse(localStorage.getItem(hiddenListKey) || '[]'));
+
+        // Get blocked users (both directions)
+        const { data: blockedData } = await supabase
+          .from('user_blocks')
+          .select('blocker_id, blocked_id')
+          .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+        const blockedUserIds = new Set<string>();
+        blockedData?.forEach(block => {
+          if (block.blocker_id === user.id) {
+            blockedUserIds.add(block.blocked_id);
+          } else {
+            blockedUserIds.add(block.blocker_id);
+          }
+        });
+
+        // Get all messages where user is sender or receiver
+        const { data: messagesData, error: messagesError } = await supabase
+          .from('messages')
+          .select('sender_id, receiver_id, message_text, created_at')
+          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .order('created_at', { ascending: false });
+
+        if (messagesError) throw messagesError;
+
+        // Group by conversation partner
+        const conversationMap = new Map<string, Conversation>();
+
+        for (const msg of messagesData || []) {
+          const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+          
+          // Skip blocked users
+          if (blockedUserIds.has(partnerId)) {
+            continue;
+          }
+          
+          // Skip hidden conversations
+          if (hiddenConversations.has(partnerId)) {
+            continue;
+          }
+          
+          if (!conversationMap.has(partnerId)) {
+            // Get partner profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id, full_name, username, avatar_url')
+              .eq('id', partnerId)
+              .single();
+
+            if (profile) {
+              conversationMap.set(partnerId, {
+                user_id: partnerId,
+                full_name: profile.full_name,
+                username: profile.username,
+                avatar_url: profile.avatar_url,
+                last_message: msg.message_text,
+                last_message_at: msg.created_at,
+                unread_count: 0,
+              });
+            }
+          }
+        }
+
+        // Get unread counts
+        for (const [partnerId, conversation] of conversationMap) {
+          const { count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('sender_id', partnerId)
+            .eq('receiver_id', user.id)
+            .is('read_at', null);
+
+          conversation.unread_count = count || 0;
+        }
+
+      const conversationsList = Array.from(conversationMap.values());
+      
+      // Merge with existing conversations to preserve all users (prevents disappearing)
+      setConversations(prev => {
+        // If this is the first load and we have conversations, use them
+        if (prev.length === 0 && conversationsList.length > 0) {
+          return conversationsList;
+        }
+        
+        // Merge existing conversations with new ones
+        const mergedMap = new Map<string, Conversation>();
+        
+        // First, add all existing conversations (preserve them)
+        prev.forEach(conv => {
+          mergedMap.set(conv.user_id, conv);
+        });
+        
+        // Then, update or add conversations from the new list
+        conversationsList.forEach(newConv => {
+          const existing = mergedMap.get(newConv.user_id);
+          if (existing) {
+            // Update existing conversation with new data
+            mergedMap.set(newConv.user_id, {
+              ...existing,
+              last_message: newConv.last_message || existing.last_message,
+              last_message_at: newConv.last_message_at || existing.last_message_at,
+              unread_count: newConv.unread_count
+            });
+          } else {
+            // Add new conversation
+            mergedMap.set(newConv.user_id, newConv);
+          }
+        });
+        
+        const mergedList = Array.from(mergedMap.values());
+        
+        // Only update if there are actual changes
+        const prevMap = new Map(prev.map(c => [c.user_id, c]));
+        const hasChanged = mergedList.some(conv => {
+          const oldConv = prevMap.get(conv.user_id);
+          if (!oldConv) return true;
+          return oldConv.last_message !== conv.last_message ||
+                 oldConv.last_message_at !== conv.last_message_at ||
+                 oldConv.unread_count !== conv.unread_count;
+        });
+        
+        return hasChanged ? mergedList : prev;
+      });
+        
+        // Update selected user profile if conversation exists (prevents flickering)
+        if (selectedConversation) {
+          const updatedUser = conversationsList.find(c => c.user_id === selectedConversation);
+          if (updatedUser) {
+            setSelectedUserProfile(prev => {
+              // Only update if actually changed
+              if (!prev || prev.user_id !== updatedUser.user_id || 
+                  prev.last_message !== updatedUser.last_message ||
+                  prev.last_message_at !== updatedUser.last_message_at ||
+                  prev.unread_count !== updatedUser.unread_count) {
+                return updatedUser;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading conversations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Define loadMessages inline
+    const loadMessages = async (partnerId: string) => {
+      if (!user) return;
+
+      try {
+        console.log('📥 Loading messages for conversation:', partnerId);
+        
+        // Load messages with reply information
+        const { data, error } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            reply_message:reply_to (
+              id,
+              message_text,
+              sender_id,
+              created_at
+            )
+          `)
+          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('❌ Error loading messages:', error);
+          throw error;
+        }
+
+        console.log('✅ Loaded messages:', data?.length || 0, 'messages');
+
+        // Process messages to include reply data
+        const processedMessages = (data || []).map((msg: any) => ({
+          ...msg,
+          reply_message: Array.isArray(msg.reply_message) ? msg.reply_message[0] : msg.reply_message
+        }));
+
+        // Always update messages to ensure latest messages are shown
+        setMessages(processedMessages);
+
+        // Mark as read
+        await supabase
+          .from('messages')
+          .update({ read_at: new Date().toISOString() })
+          .eq('sender_id', partnerId)
+          .eq('receiver_id', user.id)
+          .is('read_at', null);
+
+        // Mark as seen (if receiver has read receipts enabled)
+        const { data: receiverProfile } = await supabase
+          .from('profiles')
+          .select('show_read_receipts')
+          .eq('id', partnerId)
+          .single();
+
+        if (receiverProfile?.show_read_receipts !== false) {
+          await supabase
+            .from('messages')
+            .update({ seen_at: new Date().toISOString() })
+            .eq('sender_id', partnerId)
+            .eq('receiver_id', user.id)
+            .is('seen_at', null);
+        }
+
+        // Don't reload conversations here - it will update via real-time subscription
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      }
+    };
 
     loadConversations();
 
-    // Real-time subscription for new messages
+    // Real-time subscription for instant message delivery
     const channel = supabase
       .channel('messages-changes')
       .on(
@@ -67,10 +297,54 @@ export default function Messages() {
           filter: `receiver_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('New message received:', payload);
-          loadConversations();
-          if (selectedConversation) {
+          console.log('📨 New message received (real-time):', payload);
+          console.log('📨 Message details:', {
+            id: payload.new.id,
+            sender_id: payload.new.sender_id,
+            receiver_id: payload.new.receiver_id,
+            message_text: payload.new.message_text?.substring(0, 50) + '...',
+            created_at: payload.new.created_at
+          });
+          
+          // Update conversations list locally instead of full reload (prevents flickering)
+          setConversations(prev => {
+            const existing = prev.find(c => c.user_id === payload.new.sender_id);
+            if (existing) {
+              // Update existing conversation
+              return prev.map(c => 
+                c.user_id === payload.new.sender_id
+                  ? { ...c, last_message: payload.new.message_text, last_message_at: payload.new.created_at }
+                  : c
+              );
+            }
+            // If not found, do a full reload
+            setTimeout(() => loadConversations(), 100);
+            return prev;
+          });
+          
+          // If we're in the conversation with the sender, add message immediately
+          if (selectedConversation && payload.new.sender_id === selectedConversation) {
+            console.log('✅ Adding message to current conversation');
+            setMessages(prev => {
+              // Check if message already exists
+              if (prev.find(m => m.id === payload.new.id)) {
+                console.log('⚠️ Message already exists, skipping');
+                return prev;
+              }
+              console.log('✅ Adding new message to state');
+              const newMessages = [...prev, payload.new as Message];
+              // Scroll to bottom after a short delay to ensure DOM is updated
+              setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+              return newMessages;
+            });
+          } else if (selectedConversation) {
+            // If we're in a different conversation, reload messages to check for new ones
+            console.log('🔄 Reloading messages for different conversation');
             loadMessages(selectedConversation);
+          } else {
+            console.log('ℹ️ No conversation selected, message will appear in list');
           }
         }
       )
@@ -84,9 +358,63 @@ export default function Messages() {
         },
         (payload) => {
           console.log('Message sent:', payload);
-          loadConversations();
+          // Update conversations list locally instead of full reload (prevents flickering)
+          setConversations(prev => {
+            const existing = prev.find(c => c.user_id === payload.new.receiver_id);
+            if (existing) {
+              // Update existing conversation
+              return prev.map(c => 
+                c.user_id === payload.new.receiver_id
+                  ? { ...c, last_message: payload.new.message_text, last_message_at: payload.new.created_at }
+                  : c
+              );
+            }
+            // If not found, do a full reload
+            setTimeout(() => loadConversations(), 100);
+            return prev;
+          });
+          
+          // Message already added to local state, just refresh
           if (selectedConversation) {
             loadMessages(selectedConversation);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // Update seen_at in real-time
+          if (selectedConversation && payload.new.sender_id === selectedConversation) {
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === payload.new.id ? { ...msg, seen_at: payload.new.seen_at } : msg
+              )
+            );
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // Update seen_at for sent messages
+          if (selectedConversation && payload.new.receiver_id === selectedConversation) {
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === payload.new.id ? { ...msg, seen_at: payload.new.seen_at } : msg
+              )
+            );
           }
         }
       )
@@ -100,10 +428,9 @@ export default function Messages() {
         },
         (payload) => {
           console.log('Message deleted (received):', payload);
-          loadConversations();
-          if (selectedConversation) {
-            loadMessages(selectedConversation);
-          }
+          setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+          // Only reload if necessary (prevents flickering)
+          setTimeout(() => loadConversations(), 200);
         }
       )
       .on(
@@ -116,18 +443,39 @@ export default function Messages() {
         },
         (payload) => {
           console.log('Message deleted (sent):', payload);
-          loadConversations();
-          if (selectedConversation) {
-            loadMessages(selectedConversation);
-          }
+          setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+          // Only reload if necessary (prevents flickering)
+          setTimeout(() => loadConversations(), 200);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error');
+        }
+      });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, navigate]);
+    // Fallback: Poll for new messages every 10 seconds (reduced frequency to prevent flickering)
+    // Only poll for messages, not conversations (conversations update via real-time)
+    const pollInterval = setInterval(() => {
+      if (selectedConversation) {
+        console.log('🔄 Polling for new messages...');
+        loadMessages(selectedConversation);
+      }
+      // Don't reload conversations here - they update via real-time subscription
+    }, 10000);
+
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(pollInterval);
+      };
+    } catch (error) {
+      console.error('Error in messages useEffect:', error);
+      setLoading(false);
+    }
+  }, [user, navigate, selectedConversation]);
 
   // Handle query parameter for direct conversation
   useEffect(() => {
@@ -162,11 +510,21 @@ export default function Messages() {
     }
   }, [user, loading]);
 
-  useEffect(() => {
-    if (selectedConversation) {
-      loadMessages(selectedConversation);
+  const loadReadReceiptPreference = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('show_read_receipts')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setShowReadReceipts(data.show_read_receipts !== false);
+      }
+    } catch (error) {
+      console.error('Error loading read receipt preference:', error);
     }
-  }, [selectedConversation]);
+  };
 
   // Separate effect for loading user profile when conversation is selected but user not in list
   useEffect(() => {
@@ -181,7 +539,10 @@ export default function Messages() {
   }, [selectedConversation, conversations, loading]);
 
   useEffect(() => {
-    scrollToBottom();
+    // Scroll to bottom when messages change
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   }, [messages]);
 
   useEffect(() => {
@@ -196,9 +557,6 @@ export default function Messages() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const loadUserProfile = async (userId: string) => {
     if (!userId) return null;
@@ -222,25 +580,35 @@ export default function Messages() {
         // Store URL user profile for immediate display
         setUrlUserProfile(profile);
         
+        // Create conversation object
+        const newConversation = {
+          user_id: profile.id,
+          full_name: profile.full_name,
+          username: profile.username,
+          avatar_url: profile.avatar_url,
+          last_message: null,
+          last_message_at: new Date().toISOString(),
+          unread_count: 0
+        };
+        
+        // Update selected user profile cache if this is the selected conversation
+        if (selectedConversation === profile.id) {
+          setSelectedUserProfile(newConversation);
+        }
+        
         // Add to conversations list if not already there
         setConversations(prev => {
           const exists = prev.find(c => c.user_id === profile.id);
           if (exists) {
             console.log('User already exists in conversations');
+            // Update cache if this is selected conversation
+            if (selectedConversation === profile.id) {
+              setSelectedUserProfile(exists);
+            }
             return prev;
           }
           
           console.log('Adding user to conversations list');
-          const newConversation = {
-            user_id: profile.id,
-            full_name: profile.full_name,
-            username: profile.username,
-            avatar_url: profile.avatar_url,
-            last_message: null,
-            last_message_at: new Date().toISOString(),
-            unread_count: 0
-          };
-          
           return [newConversation, ...prev];
         });
         
@@ -335,7 +703,71 @@ export default function Messages() {
         conversation.unread_count = count || 0;
       }
 
-      setConversations(Array.from(conversationMap.values()));
+      const conversationsList = Array.from(conversationMap.values());
+      
+      // Merge with existing conversations to preserve all users (prevents disappearing)
+      setConversations(prev => {
+        // If this is the first load and we have conversations, use them
+        if (prev.length === 0 && conversationsList.length > 0) {
+          return conversationsList;
+        }
+        
+        // Merge existing conversations with new ones
+        const mergedMap = new Map<string, Conversation>();
+        
+        // First, add all existing conversations (preserve them)
+        prev.forEach(conv => {
+          mergedMap.set(conv.user_id, conv);
+        });
+        
+        // Then, update or add conversations from the new list
+        conversationsList.forEach(newConv => {
+          const existing = mergedMap.get(newConv.user_id);
+          if (existing) {
+            // Update existing conversation with new data
+            mergedMap.set(newConv.user_id, {
+              ...existing,
+              last_message: newConv.last_message || existing.last_message,
+              last_message_at: newConv.last_message_at || existing.last_message_at,
+              unread_count: newConv.unread_count
+            });
+          } else {
+            // Add new conversation
+            mergedMap.set(newConv.user_id, newConv);
+          }
+        });
+        
+        const mergedList = Array.from(mergedMap.values());
+        
+        // Only update if there are actual changes
+        const prevMap = new Map(prev.map(c => [c.user_id, c]));
+        const hasChanged = mergedList.some(conv => {
+          const oldConv = prevMap.get(conv.user_id);
+          if (!oldConv) return true;
+          return oldConv.last_message !== conv.last_message ||
+                 oldConv.last_message_at !== conv.last_message_at ||
+                 oldConv.unread_count !== conv.unread_count;
+        });
+        
+        return hasChanged ? mergedList : prev;
+      });
+      
+      // Update selected user profile if conversation exists (prevents flickering)
+      if (selectedConversation) {
+        const updatedUser = conversationsList.find(c => c.user_id === selectedConversation);
+        if (updatedUser) {
+          setSelectedUserProfile(prev => {
+            // Only update if actually changed
+            if (!prev || prev.user_id !== updatedUser.user_id || 
+                prev.last_message !== updatedUser.last_message ||
+                prev.last_message_at !== updatedUser.last_message_at ||
+                prev.unread_count !== updatedUser.unread_count) {
+              return updatedUser;
+            }
+            return prev;
+          });
+        }
+      }
     } catch (error) {
       console.error('Error loading conversations:', error);
     } finally {
@@ -347,15 +779,48 @@ export default function Messages() {
     if (!user) return;
 
     try {
+      // Load messages with reply information
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          *,
+          reply_message:reply_to (
+            id,
+            message_text,
+            sender_id,
+            created_at
+          )
+        `)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error loading messages:', error);
+        throw error;
+      }
 
-      setMessages(data || []);
+      console.log('✅ Loaded messages:', data?.length || 0, 'messages');
+
+      // Process messages to include reply data
+      const processedMessages = (data || []).map((msg: any) => ({
+        ...msg,
+        reply_message: Array.isArray(msg.reply_message) ? msg.reply_message[0] : msg.reply_message
+      }));
+
+      // Only update if messages actually changed to avoid unnecessary re-renders
+      setMessages(prev => {
+        const prevIds = new Set(prev.map(m => m.id));
+        const newIds = new Set(processedMessages.map((m: Message) => m.id));
+        
+        // Check if messages are different
+        if (prevIds.size !== newIds.size || 
+            !Array.from(prevIds).every(id => newIds.has(id))) {
+          console.log('🔄 Messages changed, updating state');
+          return processedMessages;
+        }
+        
+        return prev;
+      });
 
       // Mark as read
       await supabase
@@ -364,6 +829,22 @@ export default function Messages() {
         .eq('sender_id', partnerId)
         .eq('receiver_id', user.id)
         .is('read_at', null);
+
+      // Mark as seen (if receiver has read receipts enabled)
+      const { data: receiverProfile } = await supabase
+        .from('profiles')
+        .select('show_read_receipts')
+        .eq('id', partnerId)
+        .single();
+
+      if (receiverProfile?.show_read_receipts !== false) {
+        await supabase
+          .from('messages')
+          .update({ seen_at: new Date().toISOString() })
+          .eq('sender_id', partnerId)
+          .eq('receiver_id', user.id)
+          .is('seen_at', null);
+      }
 
       loadConversations();
     } catch (error) {
@@ -472,34 +953,109 @@ export default function Messages() {
       if (blockData) {
         // User is blocked by the receiver
         setNewMessage(messageText); // Restore message
+        const errorMsg = language === 'tr' 
+          ? 'Bu kullanıcı sizi engellemiş. Mesaj gönderemezsiniz.'
+          : 'This user has blocked you. You cannot send messages.';
+        alert(errorMsg);
         console.log('Cannot send message: user is blocked');
         return;
       }
 
-      const { data, error } = await supabase.from('messages').insert({
+      console.log('Attempting to send message:', {
         sender_id: user.id,
         receiver_id: selectedConversation,
         message_text: messageText,
-      }).select();
+        reply_to: replyingTo?.id || null
+      });
+
+      // Build insert object - only include reply_to if replyingTo exists
+      const insertData: any = {
+        sender_id: user.id,
+        receiver_id: selectedConversation,
+        message_text: messageText,
+      };
+      
+      // Only add reply_to if we're replying to a message
+      if (replyingTo?.id) {
+        insertData.reply_to = replyingTo.id;
+      }
+
+      const { data, error } = await supabase.from('messages').insert(insertData).select();
 
       if (error) {
-        console.error('Error sending message:', error);
+        console.error('❌ Error sending message:', error);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // Show user-friendly error message
+        let errorMsg = language === 'tr' 
+          ? 'Mesaj gönderilemedi. Lütfen tekrar deneyin.'
+          : 'Failed to send message. Please try again.';
+        
+        if (error.code === '42501') {
+          errorMsg = language === 'tr'
+            ? 'Bu işlem için yetkiniz yok. Lütfen tekrar giriş yapın.'
+            : 'You do not have permission for this action. Please sign in again.';
+        } else if (error.code === '23503') {
+          errorMsg = language === 'tr'
+            ? 'Geçersiz kullanıcı. Lütfen sayfayı yenileyin.'
+            : 'Invalid user. Please refresh the page.';
+        } else if (error.message?.includes('reply_to')) {
+          errorMsg = language === 'tr'
+            ? 'Yanıt gönderilemedi. Lütfen normal mesaj olarak gönderin.'
+            : 'Reply failed. Please send as a normal message.';
+        }
+        
+        alert(errorMsg);
         setNewMessage(messageText); // Restore message on error
         return;
       }
 
-      console.log('Message sent successfully:', data);
+      console.log('✅ Message sent successfully:', data);
+      console.log('📝 Message ID:', data?.[0]?.id);
+      console.log('👤 Receiver ID:', data?.[0]?.receiver_id);
+      
+      // Verify message was saved by querying it back
+      if (data && data[0]) {
+        const { data: verifyData, error: verifyError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('id', data[0].id)
+          .single();
+        
+        if (verifyError) {
+          console.error('⚠️ Message verification failed:', verifyError);
+        } else {
+          console.log('✅ Message verified in database:', verifyData);
+        }
+      }
       
       // Immediately add message to local state for instant feedback
       if (data && data[0]) {
-        setMessages(prev => [...prev, data[0]]);
+        setMessages(prev => [...prev, data[0] as Message]);
+        // Scroll to bottom after a short delay to ensure DOM is updated
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
       }
       
-      // Refresh conversations and messages
-      loadMessages(selectedConversation);
-      loadConversations();
+      // Clear reply
+      setReplyingTo(null);
+      
+      // Refresh messages (conversations will update via real-time subscription)
+      setTimeout(() => {
+        loadMessages(selectedConversation);
+      }, 100);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending message (catch):', error);
+      const errorMsg = language === 'tr'
+        ? 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
+        : 'An unexpected error occurred. Please try again.';
+      alert(errorMsg);
       setNewMessage(messageText); // Restore message on error
     } finally {
       setSending(false);
@@ -568,33 +1124,80 @@ export default function Messages() {
       setUrlUserProfile(null);
     }
     
-    // Clear search results
+    // Clear search query but keep conversations visible
     setSearchQuery('');
-    setSearchResults([]);
+    // Don't clear search results immediately - let them fade naturally
+    setTimeout(() => {
+      setSearchResults([]);
+    }, 100);
   };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    // If less than 1 hour, show minutes
+    if (minutes < 60) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // If today, show time only
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // If yesterday, show "Yesterday"
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return language === 'tr' ? 'Dün' : 'Yesterday';
+    }
+    
+    // If this week, show day name
+    if (days < 7) {
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    }
+    
+    // If older, show date
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+  };
+
+  const formatFullDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   // State for storing user profile when loaded from URL parameter
   const [urlUserProfile, setUrlUserProfile] = useState<UserProfile | null>(null);
 
-  // Find selected user from conversations or search results
+  // Use cached selected user profile, fallback to finding from conversations
   const selectedUser = React.useMemo(() => {
     if (!selectedConversation) return null;
     
-    // First check conversations
+    // First use cached profile if available (prevents flickering)
+    if (selectedUserProfile && selectedUserProfile.user_id === selectedConversation) {
+      return selectedUserProfile;
+    }
+    
+    // Then check conversations
     const convUser = conversations.find(c => c.user_id === selectedConversation);
     if (convUser) {
-      console.log('Found user in conversations:', convUser);
       return convUser;
     }
     
     // Then check URL user profile (for direct links)
     if (urlUserProfile && urlUserProfile.id === selectedConversation) {
-      console.log('Found user in URL profile:', urlUserProfile);
       return {
         user_id: urlUserProfile.id,
         full_name: urlUserProfile.full_name,
@@ -609,7 +1212,6 @@ export default function Messages() {
     // Then check search results
     const searchUser = searchResults.find(u => u.id === selectedConversation);
     if (searchUser) {
-      console.log('Found user in search results:', searchUser);
       return {
         user_id: searchUser.id,
         full_name: searchUser.full_name,
@@ -621,11 +1223,11 @@ export default function Messages() {
       };
     }
     
-    // If we're still loading conversations, show loading
+    // If we're still loading conversations, show cached or loading
     if (loading) {
-      return { 
+      return selectedUserProfile || { 
         user_id: selectedConversation, 
-        full_name: t.messages.loading, 
+        full_name: t?.messages?.loading || 'Loading...', 
         username: null, 
         avatar_url: null,
         last_message: null,
@@ -634,18 +1236,9 @@ export default function Messages() {
       };
     }
     
-    // Debug: Log current state
-    console.log('User not found, but not loading!', {
-      selectedConversation,
-      conversationsCount: conversations.length,
-      searchResultsCount: searchResults.length,
-      urlUserProfile,
-      loading
-    });
-    
-    // Return null if user truly not found and we're not loading
-    return null;
-  }, [selectedConversation, conversations, searchResults, urlUserProfile, loading]);
+    // Return cached profile if available, even if not in conversations yet
+    return selectedUserProfile;
+  }, [selectedConversation, selectedUserProfile, conversations, searchResults, urlUserProfile, loading, t]);
 
   if (!user) return null;
 
@@ -710,22 +1303,17 @@ export default function Messages() {
                     <span className="ml-2 text-slate-400">{t.messages.searching}</span>
                   </div>
                 )}
-              </div>
 
-              {/* Conversations */}
-              <div className="flex-1 overflow-y-auto">
-                {loading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="animate-spin text-purple-400" size={32} />
-                  </div>
-                ) : conversations.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6">
-                    <MessageCircle size={48} className="mb-4" />
-                    <p>{t.messages.noMessages}</p>
-                    <p className="text-sm mt-2">{t.messages.searchToStart}</p>
-                  </div>
-                ) : (
-                  conversations.map((conversation) => (
+                {/* Conversations - Always visible */}
+                <div className="flex-1 overflow-y-auto mt-2">
+                  {conversations.length > 0 && (
+                    <>
+                      {searchQuery.length > 0 && (
+                        <div className="text-xs text-slate-400 px-3 py-2 font-medium border-b border-purple-500/20">
+                          {t.messages.conversations || 'Conversations'}
+                        </div>
+                      )}
+                      {conversations.map((conversation) => (
                     <div
                       key={conversation.user_id}
                       className={`w-full flex items-center gap-3 p-4 border-b border-purple-500/10 hover:bg-slate-800/50 transition-colors group ${
@@ -756,8 +1344,17 @@ export default function Messages() {
                         </div>
                       </button>
                     </div>
-                  ))
-                )}
+                      ))}
+                    </>
+                  )}
+                  {!loading && conversations.length === 0 && searchQuery.length === 0 && (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6">
+                      <MessageCircle size={48} className="mb-4" />
+                      <p>{t.messages.noMessages}</p>
+                      <p className="text-sm mt-2">{t.messages.searchToStart}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -849,24 +1446,84 @@ export default function Messages() {
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {messages.map((message) => {
                       const isOwn = message.sender_id === user.id;
+                      const showSeen = isOwn && message.seen_at && showReadReceipts;
                       return (
-                        <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                        <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
                           <div className={`max-w-[70%] rounded-lg px-4 py-2 ${
                             isOwn
                               ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
                               : 'bg-slate-800 text-white'
                           }`}>
+                            {/* Reply preview */}
+                            {message.reply_to && message.reply_message && (
+                              <div className={`mb-2 pl-3 border-l-2 ${
+                                isOwn ? 'border-white/30' : 'border-purple-400/30'
+                              }`}>
+                                <p className={`text-xs ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
+                                  {message.reply_message.sender_id === user.id ? (language === 'tr' ? 'Sen' : 'You') : selectedUser?.full_name || 'User'}
+                                </p>
+                                <p className={`text-sm truncate ${isOwn ? 'text-white/80' : 'text-slate-300'}`}>
+                                  {message.reply_message.message_text}
+                                </p>
+                              </div>
+                            )}
                             <p className="break-words">{message.message_text}</p>
-                            <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-slate-400'}`}>
-                              {formatTime(message.created_at)}
-                            </p>
+                            <div className="flex items-center justify-end gap-1.5 mt-1">
+                              <p 
+                                className={`text-xs ${isOwn ? 'text-white/70' : 'text-slate-400'}`}
+                                title={formatFullDateTime(message.created_at)}
+                              >
+                                {formatTime(message.created_at)}
+                              </p>
+                              {isOwn && (
+                                <>
+                                  {message.read_at ? (
+                                    <CheckCheck size={14} className={showSeen ? 'text-blue-300' : 'text-white/50'} />
+                                  ) : (
+                                    <Check size={14} className="text-white/50" />
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </div>
+                          {!isOwn && (
+                            <button
+                              onClick={() => setReplyingTo(message)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-slate-400 hover:text-purple-400"
+                              title={t.messages.reply || 'Reply'}
+                            >
+                              <Reply size={16} />
+                            </button>
+                          )}
                         </div>
                       );
                     })}
                     <div ref={messagesEndRef} />
                   </div>
 
+                  {/* Reply Preview */}
+                  {replyingTo && (
+                    <div className="px-4 pt-2 border-t border-purple-500/20">
+                      <div className="flex items-center justify-between bg-slate-800/50 rounded-lg p-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Reply size={14} className="text-purple-400" />
+                            <p className="text-xs text-purple-400 font-medium">
+                              {replyingTo.sender_id === user.id ? (language === 'tr' ? 'Kendine yanıt' : 'Replying to yourself') : (language === 'tr' ? 'Yanıtlanıyor' : 'Replying')}
+                            </p>
+                          </div>
+                          <p className="text-sm text-slate-300 truncate">{replyingTo.message_text}</p>
+                        </div>
+                        <button
+                          onClick={() => setReplyingTo(null)}
+                          className="text-slate-400 hover:text-white p-1"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Message Input */}
                   <div className="p-4 border-t border-purple-500/20">
                     <div className="flex gap-2">
@@ -875,7 +1532,7 @@ export default function Messages() {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && !sending && sendMessage()}
-                        placeholder={t.messages.typePlaceholder}
+                        placeholder={replyingTo ? (t.messages.replyPlaceholder || 'Type your reply...') : t.messages.typePlaceholder}
                         className="flex-1 px-4 py-2 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
                         disabled={sending}
                       />

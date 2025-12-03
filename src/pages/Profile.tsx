@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles, MoreVertical, Ban, Star, StarOff, Flag } from 'lucide-react';
+import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles, MoreVertical, Ban, Star, StarOff, Flag, Zap } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate, useCurrentPage } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -13,6 +13,8 @@ interface ProfileData {
   avatar_url: string | null;
   bio: string | null;
   username: string | null;
+  is_developer?: boolean;
+  plan_type?: 'trial' | 'standard' | 'premium' | null;
 }
 
 interface UserStats {
@@ -46,6 +48,11 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedBio, setEditedBio] = useState('');
+  const [editedUsername, setEditedUsername] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -66,43 +73,55 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Get user ID from URL
-    const path = window.location.pathname;
-    let userId: string | null = null;
-    
-    if (path.startsWith('/profile/')) {
-      const parts = path.split('/');
-      userId = parts[2] || null;
-    }
+    const loadProfileData = async () => {
+      // Get user ID from URL
+      const path = window.location.pathname;
+      let userId: string | null = null;
+      
+      if (path.startsWith('/profile/')) {
+        const parts = path.split('/');
+        userId = parts[2] || null;
+      }
 
-    if (userId) {
-      // Viewing another user's profile
-      setProfileUserId(userId);
-      setIsOwnProfile(user ? userId === user.id : false);
-      loadOtherUserProfile(userId);
-      loadOtherUserStats(userId);
-      loadPublicDreams(userId);
-      if (user) {
-        checkFollowingStatus(userId);
-        checkBlockStatus(userId);
-        checkFavoriteStatus(userId);
+      if (userId) {
+        // Viewing another user's profile
+        setProfileUserId(userId);
+        setIsOwnProfile(user ? userId === user.id : false);
+        await loadOtherUserProfile(userId);
+        await loadOtherUserStats(userId);
+        await loadPublicDreams(userId);
+        if (user) {
+          await Promise.all([
+            checkFollowingStatus(userId),
+            checkBlockStatus(userId),
+            checkFavoriteStatus(userId),
+          ]);
+        }
+        await loadReportInfo(userId);
+      } else {
+        // Viewing own profile
+        if (!user) {
+          navigate('/signin');
+          return;
+        }
+        setProfileUserId(user.id);
+        setIsOwnProfile(true);
+        await Promise.all([
+          loadProfile(),
+          loadStats(),
+          loadPublicDreams(user.id),
+        ]);
+        if (user) {
+          await loadReportInfo(user.id);
+        }
       }
-      loadReportInfo(userId);
-    } else {
-      // Viewing own profile
-      if (!user) {
-        navigate('/signin');
-        return;
-      }
-      setProfileUserId(user.id);
-      setIsOwnProfile(true);
-      loadProfile();
-      loadStats();
-      if (user) {
-        loadReportInfo(user.id);
-      }
-    }
-  }, [user, navigate, currentPage, window.location.pathname]);
+      setLoading(false);
+    };
+
+    setLoading(true);
+    loadProfileData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, currentPage]);
 
   const loadProfile = async () => {
     if (!user) return;
@@ -116,6 +135,25 @@ export default function Profile() {
 
       if (error) throw error;
 
+      // Get subscription plan type
+      let planType: 'trial' | 'standard' | 'premium' | null = null;
+      try {
+        const { data: subscriptionData, error: subError } = await supabase
+          .from('subscriptions')
+          .select('plan_type')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (subError) {
+          console.log('Subscription query error:', subError);
+        } else if (subscriptionData?.plan_type) {
+          planType = subscriptionData.plan_type as 'trial' | 'standard' | 'premium';
+          console.log('Loaded plan type:', planType, 'for user:', user.id);
+        }
+      } catch (subError) {
+        console.log('No subscription found or error:', subError);
+      }
+
       setProfile({
         full_name: data.full_name || '',
         email: data.email || user.email || '',
@@ -123,9 +161,12 @@ export default function Profile() {
         avatar_url: data.avatar_url || null,
         bio: data.bio || null,
         username: data.username || null,
+        is_developer: data.is_developer || false,
+        plan_type: planType,
       });
       setEditedName(data.full_name || '');
       setEditedBio(data.bio || '');
+      setEditedUsername(data.username || '');
     } catch (error) {
       console.error('Error loading profile:', error);
       showToast('Failed to load profile', 'error');
@@ -152,6 +193,25 @@ export default function Profile() {
 
       if (error) throw error;
 
+      // Get subscription plan type
+      let planType: 'trial' | 'standard' | 'premium' | null = null;
+      try {
+        const { data: subscriptionData, error: subError } = await supabase
+          .from('subscriptions')
+          .select('plan_type')
+          .eq('user_id', data.id)
+          .single();
+        
+        if (subError) {
+          console.log('Subscription query error:', subError);
+        } else if (subscriptionData?.plan_type) {
+          planType = subscriptionData.plan_type as 'trial' | 'standard' | 'premium';
+          console.log('Loaded plan type:', planType, 'for user:', data.id);
+        }
+      } catch (subError) {
+        console.log('No subscription found or error:', subError);
+      }
+
       setProfile({
         full_name: data.full_name || '',
         email: '', // Don't show email for other users
@@ -159,6 +219,8 @@ export default function Profile() {
         avatar_url: data.avatar_url || null,
         bio: data.bio || null,
         username: data.username || null,
+        is_developer: data.is_developer || false,
+        plan_type: planType,
       });
       
       // Set the actual user ID for other operations
@@ -189,17 +251,82 @@ export default function Profile() {
           following_count: statsData.following_count || 0,
         });
       } else {
-        // Manual calculation
-        const [dreamsRes, followersRes, followingRes] = await Promise.all([
-          supabase.from('dreams').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_public', true),
+        // Manual calculation - get all public dreams first, then count likes and comments
+        const { data: publicDreams, error: dreamsError } = await supabase
+          .from('dreams')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_public', true);
+
+        const dreamIds = (publicDreams || []).map(d => d.id);
+        const publicDreamsCount = dreamIds.length;
+
+        // Count likes for user's public dreams
+        let totalLikes = 0;
+        if (dreamIds.length > 0) {
+          try {
+            const { data: likes, error: likesError } = await supabase
+              .from('dream_likes')
+              .select('id', { count: 'exact', head: true })
+              .in('dream_id', dreamIds);
+            
+            if (!likesError && likes !== null) {
+              totalLikes = likes.length || 0;
+            } else {
+              // Fallback: count manually
+              const { count } = await supabase
+                .from('dream_likes')
+                .select('*', { count: 'exact', head: true })
+                .in('dream_id', dreamIds);
+              totalLikes = count || 0;
+            }
+          } catch (e) {
+            console.error('Error counting likes:', e);
+          }
+        }
+
+        // Count comments for user's public dreams
+        let totalComments = 0;
+        if (dreamIds.length > 0) {
+          try {
+            const { data: comments, error: commentsError } = await supabase
+              .from('dream_comments')
+              .select('id', { count: 'exact', head: true })
+              .in('dream_id', dreamIds);
+            
+            if (!commentsError && comments !== null) {
+              totalComments = comments.length || 0;
+            } else {
+              // Fallback: count manually
+              const { count } = await supabase
+                .from('dream_comments')
+                .select('*', { count: 'exact', head: true })
+                .in('dream_id', dreamIds);
+              totalComments = count || 0;
+            }
+          } catch (e) {
+            console.error('Error counting comments:', e);
+          }
+        }
+
+        // Get followers and following counts
+        const [followersRes, followingRes] = await Promise.all([
           supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', userId),
           supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', userId),
         ]);
 
+        console.log(`Stats for user ${userId}:`, {
+          public_dreams_count: publicDreamsCount,
+          total_likes_received: totalLikes,
+          total_comments_received: totalComments,
+          followers_count: followersRes.count || 0,
+          following_count: followingRes.count || 0,
+        });
+
         setStats({
-          public_dreams_count: dreamsRes.count || 0,
-          total_likes_received: 0,
-          total_comments_received: 0,
+          public_dreams_count: publicDreamsCount,
+          total_likes_received: totalLikes,
+          total_comments_received: totalComments,
           followers_count: followersRes.count || 0,
           following_count: followingRes.count || 0,
         });
@@ -221,51 +348,99 @@ export default function Profile() {
         .order('created_at', { ascending: false })
         .limit(12);
 
-      if (error) throw error;
-
-      const dreamIds = (dreamsData || []).map(d => d.id);
-      
-      let likesData: any[] = [];
-      let commentsData: any[] = [];
-
-      if (dreamIds.length > 0) {
-        try {
-          const { data: likes } = await supabase
-            .from('dream_likes')
-            .select('dream_id')
-            .in('dream_id', dreamIds);
-          likesData = likes || [];
-        } catch (e) {
-          console.log('Error loading likes:', e);
-        }
-
-        try {
-          const { data: comments } = await supabase
-            .from('dream_comments')
-            .select('dream_id')
-            .in('dream_id', dreamIds);
-          commentsData = comments || [];
-        } catch (e) {
-          console.log('Error loading comments:', e);
-        }
+      if (error) {
+        console.error('Error loading dreams:', error);
+        throw error;
       }
 
+      if (!dreamsData || dreamsData.length === 0) {
+        setPublicDreams([]);
+        return;
+      }
+
+      const dreamIds = dreamsData.map(d => d.id);
+      console.log('Loading stats for', dreamIds.length, 'dreams:', dreamIds);
+      
+      let likesData: any[] | null = null;
+      let commentsData: any[] | null = null;
+
+      // Load likes with proper error handling
+      try {
+        const { data: likes, error: likesError } = await supabase
+          .from('dream_likes')
+          .select('dream_id')
+          .in('dream_id', dreamIds);
+        
+        if (likesError) {
+          console.error('Error loading likes:', likesError);
+          likesData = [];
+        } else {
+          likesData = likes || [];
+          console.log('✅ Loaded', likesData.length, 'likes for', dreamIds.length, 'dreams');
+        }
+      } catch (e) {
+        console.error('Exception loading likes:', e);
+        likesData = [];
+      }
+
+      // Load comments with proper error handling
+      try {
+        const { data: comments, error: commentsError } = await supabase
+          .from('dream_comments')
+          .select('dream_id')
+          .in('dream_id', dreamIds);
+        
+        if (commentsError) {
+          console.error('Error loading comments:', commentsError);
+          commentsData = [];
+        } else {
+          commentsData = comments || [];
+          console.log('✅ Loaded', commentsData.length, 'comments for', dreamIds.length, 'dreams');
+        }
+      } catch (e) {
+        console.error('Exception loading comments:', e);
+        commentsData = [];
+      }
+
+      // Count likes and comments per dream
       const likesMap = new Map<string, number>();
       const commentsMap = new Map<string, number>();
 
-      likesData.forEach(like => {
-        likesMap.set(like.dream_id, (likesMap.get(like.dream_id) || 0) + 1);
+      (likesData || []).forEach(like => {
+        if (like && like.dream_id) {
+          const current = likesMap.get(like.dream_id) || 0;
+          likesMap.set(like.dream_id, current + 1);
+        }
       });
 
-      commentsData.forEach(comment => {
-        commentsMap.set(comment.dream_id, (commentsMap.get(comment.dream_id) || 0) + 1);
+      (commentsData || []).forEach(comment => {
+        if (comment && comment.dream_id) {
+          const current = commentsMap.get(comment.dream_id) || 0;
+          commentsMap.set(comment.dream_id, current + 1);
+        }
       });
 
-      const dreamsWithStats = (dreamsData || []).map(dream => ({
-        ...dream,
-        likes_count: likesMap.get(dream.id) || 0,
-        comments_count: commentsMap.get(dream.id) || 0,
-      }));
+      const dreamsWithStats = dreamsData.map(dream => {
+        // Get calculated counts from dream_likes and dream_comments tables
+        const calculatedLikesCount = likesMap.get(dream.id) || 0;
+        const calculatedCommentsCount = commentsMap.get(dream.id) || 0;
+        
+        // Get database stored counts (from triggers)
+        const dbLikesCount = dream.likes_count || 0;
+        
+        // Use the maximum of calculated and database count to ensure we include all historical data
+        // This handles cases where triggers might not have updated or historical data exists
+        const likesCount = Math.max(dbLikesCount, calculatedLikesCount);
+        const commentsCount = calculatedCommentsCount; // Comments don't have a stored count column
+        
+        console.log(`Dream ${dream.id}: ${likesCount} likes (DB: ${dbLikesCount}, Calc: ${calculatedLikesCount}), ${commentsCount} comments`);
+        
+        return {
+          ...dream,
+          likes_count: likesCount,
+          comments_count: commentsCount,
+        };
+      });
 
       setPublicDreams(dreamsWithStats);
     } catch (error) {
@@ -578,19 +753,82 @@ export default function Profile() {
           following_count: statsData.following_count || 0,
         });
       } else {
-        // Manual calculation if view doesn't exist
-        const [dreamsRes, likesRes, commentsRes, followersRes, followingRes] = await Promise.all([
-          supabase.from('dreams').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_public', true),
-          supabase.from('dream_likes').select('dream_id').eq('dreams.user_id', user.id),
-          supabase.from('dream_comments').select('dream_id').eq('dreams.user_id', user.id),
+        // Manual calculation - get all public dreams first, then count likes and comments
+        const { data: publicDreams, error: dreamsError } = await supabase
+          .from('dreams')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_public', true);
+
+        const dreamIds = (publicDreams || []).map(d => d.id);
+        const publicDreamsCount = dreamIds.length;
+
+        // Count likes for user's public dreams
+        let totalLikes = 0;
+        if (dreamIds.length > 0) {
+          try {
+            const { data: likes, error: likesError } = await supabase
+              .from('dream_likes')
+              .select('id', { count: 'exact', head: true })
+              .in('dream_id', dreamIds);
+            
+            if (!likesError && likes !== null) {
+              totalLikes = likes.length || 0;
+            } else {
+              // Fallback: count manually
+              const { count } = await supabase
+                .from('dream_likes')
+                .select('*', { count: 'exact', head: true })
+                .in('dream_id', dreamIds);
+              totalLikes = count || 0;
+            }
+          } catch (e) {
+            console.error('Error counting likes:', e);
+          }
+        }
+
+        // Count comments for user's public dreams
+        let totalComments = 0;
+        if (dreamIds.length > 0) {
+          try {
+            const { data: comments, error: commentsError } = await supabase
+              .from('dream_comments')
+              .select('id', { count: 'exact', head: true })
+              .in('dream_id', dreamIds);
+            
+            if (!commentsError && comments !== null) {
+              totalComments = comments.length || 0;
+            } else {
+              // Fallback: count manually
+              const { count } = await supabase
+                .from('dream_comments')
+                .select('*', { count: 'exact', head: true })
+                .in('dream_id', dreamIds);
+              totalComments = count || 0;
+            }
+          } catch (e) {
+            console.error('Error counting comments:', e);
+          }
+        }
+
+        // Get followers and following counts
+        const [followersRes, followingRes] = await Promise.all([
           supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', user.id),
           supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', user.id),
         ]);
 
+        console.log(`Stats for user ${user.id}:`, {
+          public_dreams_count: publicDreamsCount,
+          total_likes_received: totalLikes,
+          total_comments_received: totalComments,
+          followers_count: followersRes.count || 0,
+          following_count: followingRes.count || 0,
+        });
+
         setStats({
-          public_dreams_count: dreamsRes.count || 0,
-          total_likes_received: 0, // Would need join
-          total_comments_received: 0, // Would need join
+          public_dreams_count: publicDreamsCount,
+          total_likes_received: totalLikes,
+          total_comments_received: totalComments,
           followers_count: followersRes.count || 0,
           following_count: followingRes.count || 0,
         });
@@ -611,6 +849,18 @@ export default function Profile() {
       return;
     }
 
+    // Username validation
+    if (editedUsername.trim()) {
+      if (editedUsername.length < 3) {
+        showToast('Username must be at least 3 characters', 'error');
+        return;
+      }
+      if (!/^[a-z0-9_]+$/.test(editedUsername.toLowerCase())) {
+        showToast('Username can only contain lowercase letters, numbers, and underscores', 'error');
+        return;
+      }
+    }
+
     try {
       const updateData: any = { 
         full_name: editedName.trim(),
@@ -619,6 +869,29 @@ export default function Profile() {
       
       if (editedBio !== undefined) {
         updateData.bio = editedBio.trim() || null;
+      }
+
+      // Update username if changed
+      if (editedUsername.trim() && editedUsername.toLowerCase() !== profile?.username?.toLowerCase()) {
+        // Check if username is already taken
+        const { data: existingUser, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', editedUsername.toLowerCase())
+          .neq('id', user.id)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Error checking username:', checkError);
+          throw checkError;
+        }
+
+        if (existingUser) {
+          showToast('This username is already taken', 'error');
+          return;
+        }
+
+        updateData.username = editedUsername.toLowerCase().trim();
       }
 
       const { error } = await supabase
@@ -635,10 +908,16 @@ export default function Profile() {
       setProfile((prev) => prev ? { 
         ...prev, 
         full_name: editedName.trim(), 
-        bio: editedBio.trim() || null 
+        bio: editedBio.trim() || null,
+        username: editedUsername.trim() || prev?.username || null
       } : null);
       
       setIsEditing(false);
+      setEditedUsername('');
+      setIsChangingPassword(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
       showToast(t.profile.profileSaved, 'success');
     } catch (error: any) {
       console.error('Error updating profile:', error);
@@ -646,10 +925,70 @@ export default function Profile() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!user) {
+      showToast('You must be logged in to change password', 'error');
+      return;
+    }
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showToast('Please fill in all password fields', 'error');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showToast('New password must be at least 6 characters', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showToast('New passwords do not match', 'error');
+      return;
+    }
+
+    try {
+      // First, verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email || '',
+        password: currentPassword
+      });
+
+      if (signInError) {
+        showToast('Current password is incorrect', 'error');
+        return;
+      }
+
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        throw updateError;
+      }
+
+      // Clear form
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsChangingPassword(false);
+      showToast('Password changed successfully', 'success');
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      showToast(error?.message || 'Failed to change password', 'error');
+    }
+  };
+
   const handleCancel = () => {
     setEditedName(profile?.full_name || '');
     setEditedBio(profile?.bio || '');
+    setEditedUsername(profile?.username || '');
     setIsEditing(false);
+    setIsChangingPassword(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   const loadFollowers = async () => {
@@ -1160,7 +1499,7 @@ export default function Profile() {
                 )}
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <h2 className="text-2xl font-semibold text-white">
                     {isEditing ? (
                       <input
@@ -1174,8 +1513,24 @@ export default function Profile() {
                       profile?.full_name || profile?.username || 'User'
                     )}
                   </h2>
-                  {profile?.username && (
+                  {!isEditing && profile?.username && (
                     <span className="text-slate-500 text-sm">@{profile.username}</span>
+                  )}
+                  {!isEditing && profile?.is_developer && (
+                    <span className="px-2.5 py-1 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/40 rounded-lg text-cyan-400 text-xs font-semibold flex items-center gap-1.5">
+                      <Sparkles size={12} />
+                      {t.profile.developer}
+                    </span>
+                  )}
+                  {!isEditing && profile?.plan_type && profile.plan_type !== 'trial' && (
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
+                      profile.plan_type === 'premium'
+                        ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-400'
+                        : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-400'
+                    }`}>
+                      <Zap size={12} />
+                      {profile.plan_type === 'premium' ? 'Premium' : 'Standard'}
+                    </span>
                   )}
                 </div>
                 {isEditing ? (
@@ -1262,6 +1617,94 @@ export default function Profile() {
                   </div>
                 </div>
 
+                {/* Username */}
+                <div className="p-4 bg-slate-950/30 rounded-lg">
+                  <div className="flex items-center gap-4 mb-2">
+                    <Grid3x3 className="text-cyan-400" size={20} />
+                    <div className="flex-1">
+                      <p className="text-slate-400 text-sm mb-2">Username</p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedUsername}
+                          onChange={(e) => setEditedUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                          placeholder="username"
+                          className="w-full bg-slate-900/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
+                          maxLength={30}
+                        />
+                      ) : (
+                        <p className="text-white">@{profile?.username || 'No username'}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Password Change - Only visible when editing */}
+                {isOwnProfile && isEditing && (
+                  <div className="p-4 bg-slate-950/30 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-4">
+                        <User className="text-pink-400" size={20} />
+                        <div>
+                          <p className="text-slate-400 text-sm">Password</p>
+                          <p className="text-white text-sm">••••••••</p>
+                        </div>
+                      </div>
+                      {!isChangingPassword ? (
+                        <button
+                          onClick={() => setIsChangingPassword(true)}
+                          className="px-4 py-2 text-sm bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 rounded-lg text-purple-400 transition-all"
+                        >
+                          Change Password
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setIsChangingPassword(false);
+                            setCurrentPassword('');
+                            setNewPassword('');
+                            setConfirmPassword('');
+                          }}
+                          className="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                    {isChangingPassword && (
+                      <div className="space-y-3 mt-4">
+                        <input
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Current password"
+                          className="w-full bg-slate-900/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
+                        />
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New password (min 6 characters)"
+                          className="w-full bg-slate-900/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
+                        />
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Confirm new password"
+                          className="w-full bg-slate-900/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
+                        />
+                        <button
+                          onClick={handleChangePassword}
+                          className="w-full px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold rounded-lg hover:from-pink-500 hover:to-purple-500 transition-all"
+                        >
+                          Update Password
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4 p-4 bg-slate-950/30 rounded-lg">
                   <Calendar className="text-pink-400" size={20} />
                   <div className="flex-1">
@@ -1306,6 +1749,7 @@ export default function Profile() {
                       onClick={() => {
                         setEditedName(profile?.full_name || '');
                         setEditedBio(profile?.bio || '');
+                        setEditedUsername(profile?.username || '');
                         setIsEditing(true);
                       }}
                       className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 transition-all duration-300"
