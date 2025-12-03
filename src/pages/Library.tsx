@@ -37,6 +37,11 @@ export default function Library() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
+  const [stats, setStats] = useState({
+    total: 0,
+    public: 0,
+    private: 0,
+  });
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -135,6 +140,16 @@ export default function Library() {
       }));
       setDreams(dreamsWithFavorites);
       setFavorites(currentFavorites);
+
+      // Calculate stats
+      const total = dreamsWithFavorites.length;
+      const publicCount = dreamsWithFavorites.filter(d => d.is_public === true).length;
+      const privateCount = total - publicCount;
+      setStats({
+        total,
+        public: publicCount,
+        private: privateCount,
+      });
     } catch (error) {
       console.error('Error loading dreams:', error);
     } finally {
@@ -387,6 +402,22 @@ export default function Library() {
           <p className="text-slate-400 text-lg mb-6">
             {t.library.subtitle}
           </p>
+
+          {/* Stats Cards - Small and compact */}
+          <div className="flex justify-center gap-3 mb-6">
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-lg px-4 py-2">
+              <div className="text-lg font-semibold text-white">{stats.total}</div>
+              <div className="text-xs text-slate-400">Total Dreams</div>
+            </div>
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-lg px-4 py-2">
+              <div className="text-lg font-semibold text-white">{stats.public}</div>
+              <div className="text-xs text-slate-400">Public Dreams</div>
+            </div>
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-lg px-4 py-2">
+              <div className="text-lg font-semibold text-white">{stats.private}</div>
+              <div className="text-xs text-slate-400">Private Dreams</div>
+            </div>
+          </div>
 
           {/* Search and Filter */}
           <div className="max-w-2xl mx-auto mb-8 space-y-4 animate-fade-in-delay">

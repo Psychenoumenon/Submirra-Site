@@ -25,10 +25,7 @@ export default function Navigation() {
     { label: t.nav.library, path: '/library' as const },
   ];
 
-  const userNavItems = user ? [
-    { label: t.nav.dashboard, path: '/dashboard' as const },
-    { label: t.nav.contact, path: '/contact' as const },
-  ] : [
+  const userNavItems = [
     { label: t.nav.contact, path: '/contact' as const },
   ];
 
