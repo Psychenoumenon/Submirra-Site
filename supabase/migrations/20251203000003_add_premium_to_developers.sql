@@ -27,6 +27,7 @@ AND (plan_type != 'premium' OR plan_type IS NULL);
 
 -- If subscription doesn't exist, create it
 INSERT INTO subscriptions (
+  id,
   user_id,
   plan_type,
   status,
@@ -39,6 +40,7 @@ INSERT INTO subscriptions (
   updated_at
 )
 SELECT 
+  gen_random_uuid(), -- Generate UUID for subscription id
   id,
   'premium',
   'active',
