@@ -6,6 +6,7 @@ import { useLanguage } from '../lib/i18n';
 import { useToast } from '../lib/ToastContext';
 import { supabase } from '../lib/supabase';
 import { getDreamText, getAnalysisText } from '../lib/translateDream';
+import { isDeveloperSync } from '../lib/developer';
 
 interface PublicDream {
   id: string;
@@ -575,9 +576,27 @@ export default function Social() {
       }
 
       // Check if user is developer (developers can delete any dream)
-      const { data: isDev } = await supabase.rpc('is_developer', {
-        p_user_id: user.id
-      });
+      // Use sync check first for immediate response
+      const isDevSync = isDeveloperSync(user.id);
+      let isDev = isDevSync;
+      
+      // Also check with RPC for additional verification (but don't block if it fails)
+      if (!isDevSync) {
+        // Only check RPC if sync check says not developer (double-check)
+        try {
+          const { data: isDevRpc, error: rpcError } = await supabase.rpc('is_developer', {
+            p_user_id: user.id
+          });
+          if (!rpcError && isDevRpc === true) {
+            isDev = true;
+          }
+        } catch (error) {
+          console.log('Error checking developer status with RPC, using sync check:', error);
+          // If RPC fails, use sync check result
+        }
+      }
+      
+      console.log('Developer check:', { userId: user.id, isDevSync, isDev });
 
       // Build delete query - developers can delete any dream, others can only delete their own
       let deleteQuery = supabase
@@ -1200,15 +1219,15 @@ export default function Social() {
                       >
                         <Share2 size={24} />
                       </button>
-                      {user && dream.user_id === user.id && (
+                      {user && (dream.user_id === user.id || isDeveloperSync(user.id)) && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteDream(dream.id, e);
                           }}
                           className="text-slate-400 hover:text-red-400 transition-all hover:scale-110 ml-auto"
-                          title={t.social.deleteDream}
-                          aria-label={t.social.deleteDream}
+                          title={dream.user_id === user.id ? t.social.deleteDream : 'Delete dream (Developer)'}
+                          aria-label={dream.user_id === user.id ? t.social.deleteDream : 'Delete dream (Developer)'}
                         >
                           <Trash2 size={20} />
                         </button>
@@ -1298,12 +1317,27 @@ export default function Social() {
                 </div>
                 <h2 className="text-xl font-semibold text-white">Dream Entry</h2>
               </div>
-              <button
-                onClick={() => setSelectedDream(null)}
-                className="text-slate-400 hover:text-white transition-colors text-xl"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                {user && (selectedDream.user_id === user.id || isDeveloperSync(user.id)) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteDream(selectedDream.id, e);
+                    }}
+                    className="text-slate-400 hover:text-red-400 transition-colors p-2 hover:bg-red-500/10 rounded-lg"
+                    title={selectedDream.user_id === user.id ? t.social.deleteDream : 'Delete dream (Developer)'}
+                    aria-label={selectedDream.user_id === user.id ? t.social.deleteDream : 'Delete dream (Developer)'}
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedDream(null)}
+                  className="text-slate-400 hover:text-white transition-colors text-xl"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Horizontal Layout: Image Left, Content Right */}

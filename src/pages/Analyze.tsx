@@ -5,6 +5,7 @@ import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
 import { useToast } from '../lib/ToastContext';
 import { supabase } from '../lib/supabase';
+import { isDeveloperSync } from '../lib/developer';
 
 export default function Analyze() {
   const { user, loading } = useAuth();
@@ -34,6 +35,15 @@ export default function Analyze() {
     if (!user) return;
 
     try {
+      // Check if user is developer (developers have unlimited analysis)
+      const isDev = isDeveloperSync(user.id);
+      
+      if (isDev) {
+        // Developers have unlimited analysis - show infinity symbol
+        setRemainingAnalyses({ used: 0, limit: Infinity });
+        return;
+      }
+
       // Use the check_daily_analysis_limit function to get accurate data
       const { data: limitData, error: limitError } = await supabase.rpc('check_daily_analysis_limit', {
         p_user_id: user.id
@@ -131,42 +141,55 @@ export default function Analyze() {
         return;
       }
 
-      // Check if user can submit analysis (trial expired check)
-      const { data: canSubmit, error: checkError } = await supabase.rpc('can_user_submit_analysis', {
-        p_user_id: user.id
-      });
-
-      if (checkError) {
-        console.error('Error checking analysis permission:', checkError);
-        // Continue anyway, but log the error
-      } else if (canSubmit === false) {
-        setError('Trial süreniz dolmuş. Analiz yapmak için lütfen standart veya premium paket satın alın.');
-        showToast('Trial süreniz dolmuş. Paket satın almak için Pricing sayfasına gidin.', 'error');
-        setIsSubmitting(false);
-        return;
+      // Check if user is developer first (developers have unlimited analysis)
+      const isDevSync = isDeveloperSync(user.id);
+      let isDev = isDevSync;
+      
+      // Also verify with RPC if sync check says not developer
+      if (!isDevSync) {
+        try {
+          const { data: isDevRpc, error: rpcError } = await supabase.rpc('is_developer', {
+            p_user_id: user.id
+          });
+          if (!rpcError && isDevRpc === true) {
+            isDev = true;
+          }
+        } catch (error) {
+          console.log('Error checking developer status with RPC, using sync check:', error);
+        }
       }
 
-      // Check trial analysis limit (for trial users)
-      const { data: trialLimitOk, error: trialLimitError } = await supabase.rpc('check_trial_analysis_limit', {
-        p_user_id: user.id
-      });
-
-      if (trialLimitError) {
-        console.error('Error checking trial limit:', trialLimitError);
-      } else if (trialLimitOk === false) {
-        setError('Trial analiz hakkınız dolmuş. Daha fazla analiz için lütfen standart veya premium paket satın alın.');
-        showToast('Trial analiz hakkınız dolmuş. Paket satın almak için Pricing sayfasına gidin.', 'error');
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Check if user is developer (developers have unlimited analysis)
-      const { data: isDev } = await supabase.rpc('is_developer', {
-        p_user_id: user.id
-      });
-
-      // Only check daily limit if user is not a developer
+      // Skip all permission and limit checks if user is developer
       if (!isDev) {
+        // Check if user can submit analysis (trial expired check)
+        const { data: canSubmit, error: checkError } = await supabase.rpc('can_user_submit_analysis', {
+          p_user_id: user.id
+        });
+
+        if (checkError) {
+          console.error('Error checking analysis permission:', checkError);
+          // Continue anyway, but log the error
+        } else if (canSubmit === false) {
+          setError('Trial süreniz dolmuş. Analiz yapmak için lütfen standart veya premium paket satın alın.');
+          showToast('Trial süreniz dolmuş. Paket satın almak için Pricing sayfasına gidin.', 'error');
+          setIsSubmitting(false);
+          return;
+        }
+        // Check trial analysis limit (for trial users)
+        const { data: trialLimitOk, error: trialLimitError } = await supabase.rpc('check_trial_analysis_limit', {
+          p_user_id: user.id
+        });
+
+        if (trialLimitError) {
+          console.error('Error checking trial limit:', trialLimitError);
+        } else if (trialLimitOk === false) {
+          setError('Trial analiz hakkınız dolmuş. Daha fazla analiz için lütfen standart veya premium paket satın alın.');
+          showToast('Trial analiz hakkınız dolmuş. Paket satın almak için Pricing sayfasına gidin.', 'error');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Only check daily limit if user is not a developer
         // Check daily analysis limit (for standard and premium users)
         const { data: dailyLimitData, error: dailyLimitError } = await supabase.rpc('check_daily_analysis_limit', {
           p_user_id: user.id
@@ -304,7 +327,11 @@ export default function Analyze() {
               <div className="absolute -top-3 right-4 md:right-6 flex gap-2 items-center">
                 {remainingAnalyses && (
                   <div className="px-3 py-1 bg-slate-800/80 border border-purple-500/30 rounded-full text-purple-300 text-xs font-semibold">
-                    {remainingAnalyses.used}/{remainingAnalyses.limit}
+                    {remainingAnalyses.limit === Infinity ? (
+                      <span className="text-cyan-400">∞</span>
+                    ) : (
+                      `${remainingAnalyses.used}/${remainingAnalyses.limit}`
+                    )}
                   </div>
                 )}
                 <button

@@ -6,6 +6,7 @@ import { useLanguage } from '../lib/i18n';
 import { useToast } from '../lib/ToastContext';
 import { supabase } from '../lib/supabase';
 import { getDreamText, getAnalysisText } from '../lib/translateDream';
+import { isDeveloperSync } from '../lib/developer';
 
 interface Dream {
   id: string;
@@ -217,12 +218,20 @@ export default function Library() {
         console.log('Error deleting comments:', e);
       }
 
-      // Delete the dream - only allow deleting own dreams
-      const { error } = await supabase
+      // Check if user is developer (developers can delete any dream)
+      const isDev = isDeveloperSync(user.id);
+      
+      // Build delete query - developers can delete any dream, others can only delete their own
+      let deleteQuery = supabase
         .from('dreams')
         .delete()
-        .eq('id', dreamId)
-        .eq('user_id', user.id);
+        .eq('id', dreamId);
+      
+      if (!isDev) {
+        deleteQuery = deleteQuery.eq('user_id', user.id); // Only allow deleting own dreams
+      }
+
+      const { error } = await deleteQuery;
 
       if (error) {
         console.error('Delete error:', error);
