@@ -63,16 +63,11 @@ export default function Social() {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchUsers, setSearchUsers] = useState<any[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const lastDreamElementRef = useRef<HTMLDivElement | null>(null);
   const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -122,29 +117,8 @@ export default function Social() {
     if (user) {
       loadFollowingUsers();
     }
-  }, [user, sortBy, filterBy]);
+  }, [user, sortBy, filterBy, searchQuery]);
 
-  useEffect(() => {
-    // Infinite scroll observer
-    if (observerRef.current) observerRef.current.disconnect();
-    
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
-          loadMoreDreams();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (lastDreamElementRef.current) {
-      observerRef.current.observe(lastDreamElementRef.current);
-    }
-
-    return () => {
-      if (observerRef.current) observerRef.current.disconnect();
-    };
-  }, [hasMore, loadingMore, loading, dreams]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -193,21 +167,12 @@ export default function Social() {
     }
   };
 
-  const loadPublicDreams = async (reset = true) => {
+  const loadPublicDreams = async () => {
     try {
-      if (reset) {
-        setLoading(true);
-        setPage(0);
-        setDreams([]);
-      } else {
-        setLoadingMore(true);
-      }
-      
-      const currentPage = reset ? 0 : page + 1;
-      const limit = 10;
-      const offset = currentPage * limit;
+      setLoading(true);
+      setDreams([]);
 
-      // Build query
+      // Build query - Load all dreams without pagination
       let query = supabase
         .from('dreams')
         .select(`
@@ -222,16 +187,14 @@ export default function Social() {
           )
         `)
         .eq('is_public', true)
-        .in('status', ['completed', 'pending']); // Show both completed and pending public dreams
+        .in('status', ['completed', 'pending', 'processing']); // Show all public dreams (completed, pending, and processing)
 
       // Apply filter
       if (filterBy === 'following' && user) {
         const followingIds = Array.from(followingUsers);
         if (followingIds.length === 0) {
           setDreams([]);
-          setHasMore(false);
           setLoading(false);
-          setLoadingMore(false);
           return;
         }
         query = query.in('user_id', followingIds);
@@ -254,8 +217,6 @@ export default function Social() {
         query = query.order('created_at', { ascending: false });
       }
 
-      query = query.range(offset, offset + limit - 1);
-
       let { data: dreamsData, error: dreamsError } = await query;
 
       if (dreamsError) {
@@ -273,16 +234,14 @@ export default function Social() {
                 username
               )
             `)
-            .in('status', ['completed', 'pending']); // Show both completed and pending public dreams
+            .in('status', ['completed', 'pending', 'processing']); // Show all public dreams (completed, pending, and processing)
           
           // Apply filter
           if (filterBy === 'following' && user) {
             const followingIds = Array.from(followingUsers);
             if (followingIds.length === 0) {
               setDreams([]);
-              setHasMore(false);
               setLoading(false);
-              setLoadingMore(false);
               return;
             }
             retryQuery = retryQuery.in('user_id', followingIds);
@@ -302,7 +261,7 @@ export default function Social() {
             retryQuery = retryQuery.order('created_at', { ascending: false });
           }
 
-          retryQuery = retryQuery.range(offset, offset + limit - 1);
+          // No pagination - load all dreams
           
           const { data, error: retryError } = await retryQuery;
           
@@ -414,17 +373,9 @@ export default function Social() {
           });
         }
 
-        if (reset) {
-          setDreams(dreamsWithStats);
-        } else {
-          setDreams(prev => [...prev, ...dreamsWithStats]);
-        }
-
-        setHasMore(dreamsWithStats.length === limit);
-        setPage(currentPage);
+        setDreams(dreamsWithStats);
       } else {
-        if (reset) setDreams([]);
-        setHasMore(false);
+        setDreams([]);
       }
     } catch (error: any) {
       console.error('Error loading public dreams:', error);
@@ -439,15 +390,9 @@ export default function Social() {
       }
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
   };
 
-  const loadMoreDreams = () => {
-    if (!loadingMore && hasMore) {
-      loadPublicDreams(false);
-    }
-  };
 
   const searchUsersByName = async (query: string) => {
     if (!query.trim() || query.length < 2) {
@@ -859,7 +804,7 @@ export default function Social() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setTimeout(() => loadPublicDreams(true), 500);
+                  setTimeout(() => loadPublicDreams(), 500);
                 }}
                 placeholder={t.social.searchDreamsPlaceholder}
                 className="w-full pl-10 pr-4 py-3 bg-slate-900/50 backdrop-blur-sm border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
@@ -875,7 +820,7 @@ export default function Social() {
               <button
                 onClick={() => {
                   setFilterBy('all');
-                  loadPublicDreams(true);
+                  loadPublicDreams();
                 }}
                 className={`px-3 py-1 rounded text-sm font-medium transition-all ${
                   filterBy === 'all'
@@ -889,7 +834,7 @@ export default function Social() {
                 <button
                   onClick={() => {
                     setFilterBy('following');
-                    loadPublicDreams(true);
+                    loadPublicDreams();
                   }}
                   className={`px-3 py-1 rounded text-sm font-medium transition-all flex items-center gap-1 ${
                     filterBy === 'following'
@@ -908,7 +853,7 @@ export default function Social() {
               <button
                 onClick={() => {
                   setSortBy('recent');
-                  loadPublicDreams(true);
+                  loadPublicDreams();
                 }}
                 className={`px-3 py-1 rounded text-sm font-medium transition-all flex items-center gap-1 ${
                   sortBy === 'recent'
@@ -922,7 +867,7 @@ export default function Social() {
               <button
                 onClick={() => {
                   setSortBy('popular');
-                  loadPublicDreams(true);
+                  loadPublicDreams();
                 }}
                 className={`px-3 py-1 rounded text-sm font-medium transition-all flex items-center gap-1 ${
                   sortBy === 'popular'
@@ -936,7 +881,7 @@ export default function Social() {
               <button
                 onClick={() => {
                   setSortBy('trending');
-                  loadPublicDreams(true);
+                  loadPublicDreams();
                 }}
                 className={`px-3 py-1 rounded text-sm font-medium transition-all flex items-center gap-1 ${
                   sortBy === 'trending'
@@ -967,7 +912,6 @@ export default function Social() {
             {dreams.map((dream, index) => (
               <div
                 key={dream.id}
-                ref={index === dreams.length - 1 ? lastDreamElementRef : null}
                 className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group"
               >
                 {/* Dream Image - Instagram Style with Carousel */}
@@ -1264,19 +1208,6 @@ export default function Social() {
           </div>
         )}
 
-        {/* Loading More */}
-        {loadingMore && (
-          <div className="flex justify-center py-8">
-            <Loader2 className="animate-spin text-purple-400" size={32} />
-          </div>
-        )}
-
-        {/* End of Feed */}
-        {!hasMore && dreams.length > 0 && (
-          <div className="text-center py-8 text-slate-400">
-            <p>{t.social.endOfFeed}</p>
-          </div>
-        )}
       </div>
 
       {/* Dream Modal */}
