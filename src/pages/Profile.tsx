@@ -141,7 +141,7 @@ export default function Profile() {
       const [profileResult, subscriptionResult] = await Promise.allSettled([
         supabase
           .from('profiles')
-          .select('id, full_name, email, avatar_url, bio, username, created_at, is_developer')
+          .select('id, full_name, avatar_url, bio, username, created_at, is_developer')
           .eq('id', user.id)
           .single(),
         supabase
@@ -164,7 +164,7 @@ export default function Profile() {
 
       setProfile({
         full_name: data.full_name || '',
-        email: data.email || user.email || '',
+        email: user.email || '', // Email comes from auth.users, not profiles table
         created_at: data.created_at || user.created_at || '',
         avatar_url: data.avatar_url || null,
         bio: data.bio || null,

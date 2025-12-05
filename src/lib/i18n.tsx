@@ -69,6 +69,8 @@ interface Translations {
     pendingMessage: string;
     goToLibrary: string;
     processingTitle: string;
+    pendingDreamWarning: string;
+    dailyLimitExceeded: string;
   };
   library: {
     title: string;
@@ -280,10 +282,28 @@ interface Translations {
     deleteConversation: string;
   };
   notifications: {
+    title: string;
     deleteAll: string;
     deleteAllConfirm: string;
     deleteAllSuccess: string;
     deleteAllError: string;
+    markAllRead: string;
+    markAllReadSuccess: string;
+    markAllReadError: string;
+    deleteError: string;
+    noNotifications: string;
+    dreamCompleted: string;
+    dreamCompletedToast: string;
+    trialExpired: string;
+    someoneLiked: string;
+    someoneCommented: string;
+    someoneFollowed: string;
+    someone: string;
+    newNotification: string;
+    justNow: string;
+    minutesAgo: string;
+    hoursAgo: string;
+    daysAgo: string;
   };
   pricing: {
     title: string;
@@ -526,6 +546,8 @@ const translations: Record<Language, Translations> = {
       pendingMessage: 'Your dream will be analyzed and visualized shortly. Please wait. Once completed, you will receive a notification. You can check the status of your dream in your library.',
       goToLibrary: 'Go to Library',
       processingTitle: 'Dream Analysis in Progress',
+      pendingDreamWarning: 'Please wait for your current dream analysis to complete first. You can analyze a new dream after the current analysis is finished.',
+      dailyLimitExceeded: 'Your daily analysis limit has been reached. You have used {used}/{limit} analyses today. Limits will reset in 24 hours.',
     },
     library: {
       title: 'Your Dream Library',
@@ -742,10 +764,28 @@ const translations: Record<Language, Translations> = {
       replyPlaceholder: 'Type your reply...',
     },
     notifications: {
+      title: 'Notifications',
       deleteAll: 'Delete All',
       deleteAllConfirm: 'Are you sure you want to delete all notifications?',
       deleteAllSuccess: 'All notifications deleted',
       deleteAllError: 'Failed to delete all notifications',
+      markAllRead: 'Mark all read',
+      markAllReadSuccess: 'All notifications marked as read',
+      markAllReadError: 'Failed to mark all as read',
+      deleteError: 'Failed to delete notification',
+      noNotifications: 'No notifications yet',
+      dreamCompleted: 'Your dream analysis is ready! Click to view in your library.',
+      dreamCompletedToast: 'Your dream analysis is ready!',
+      trialExpired: 'Your 3-day free trial has expired. Upgrade to continue using Submirra!',
+      someoneLiked: 'liked your dream',
+      someoneCommented: 'commented on your dream',
+      someoneFollowed: 'started following you',
+      someone: 'Someone',
+      newNotification: 'New notification',
+      justNow: 'Just now',
+      minutesAgo: 'm ago',
+      hoursAgo: 'h ago',
+      daysAgo: 'd ago',
     },
     pricing: {
       title: 'Simple, Transparent Pricing',
@@ -986,6 +1026,8 @@ const translations: Record<Language, Translations> = {
       pendingMessage: 'Rüyanız kısa süre içinde analiz edilip görselleştirilecektir. Lütfen bekleyiniz. Tamamlandıktan sonra size bildirim gelecektir, kütüphanenizden rüyanızın durumunu kontrol edebilirsiniz.',
       goToLibrary: 'Kütüphaneye Git',
       processingTitle: 'Rüya Analizi Devam Ediyor',
+      pendingDreamWarning: 'Lütfen önce mevcut rüya analizinizin tamamlanmasını bekleyin. Analiz tamamlandıktan sonra yeni bir rüya analiz edebilirsiniz.',
+      dailyLimitExceeded: 'Günlük analiz limitiniz tükendi. Bugün {used}/{limit} analiz yaptınız. Limitler 24 saat sonra yenilenecektir.',
     },
     library: {
       title: 'Rüya Kütüphaneniz',
@@ -1205,10 +1247,28 @@ const translations: Record<Language, Translations> = {
       deleteConversation: 'Sohbeti Sil',
     },
     notifications: {
+      title: 'Bildirimler',
       deleteAll: 'Bütün Bildirimleri Sil',
       deleteAllConfirm: 'Tüm bildirimleri silmek istediğinizden emin misiniz?',
       deleteAllSuccess: 'Tüm bildirimler silindi',
       deleteAllError: 'Bildirimler silinemedi',
+      markAllRead: 'Tümünü okundu işaretle',
+      markAllReadSuccess: 'Tüm bildirimler okundu olarak işaretlendi',
+      markAllReadError: 'Tümünü okundu işaretleme başarısız',
+      deleteError: 'Bildirim silinemedi',
+      noNotifications: 'Henüz bildirim yok',
+      dreamCompleted: 'Rüya analiziniz hazır! Kütüphanenizde görüntülemek için tıklayın.',
+      dreamCompletedToast: 'Rüya analiziniz hazır!',
+      trialExpired: '3 günlük ücretsiz denemeniz sona erdi. Submirra\'yı kullanmaya devam etmek için yükseltin!',
+      someoneLiked: 'rüyanızı beğendi',
+      someoneCommented: 'rüyanıza yorum yaptı',
+      someoneFollowed: 'sizi takip etmeye başladı',
+      someone: 'Birisi',
+      newNotification: 'Yeni bildirim',
+      justNow: 'Az önce',
+      minutesAgo: 'dakika önce',
+      hoursAgo: 'saat önce',
+      daysAgo: 'gün önce',
     },
     pricing: {
       title: 'Basit ve Şeffaf Fiyatlandırma',
@@ -1226,7 +1286,7 @@ const translations: Record<Language, Translations> = {
       },
       standard: {
         title: 'Standart',
-        price: '₺450',
+        price: '₺638',
         period: 'ay',
         description: 'Düzenli rüya günlüğü ve içgörüler için harika',
         feature1: 'Günde 3 rüya analizi',
@@ -1239,7 +1299,7 @@ const translations: Record<Language, Translations> = {
       premium: {
         badge: 'En Popüler',
         title: 'Premium',
-        price: '₺900',
+        price: '₺1,275',
         period: 'ay',
         description: 'Sınırsız kütüphane ve çoklu görselleştirmelerle bilinçaltınızın kilidini tamamen açın',
         feature1: 'Günde 5 rüya analizi',

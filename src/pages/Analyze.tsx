@@ -17,12 +17,56 @@ export default function Analyze() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
+  const [remainingAnalyses, setRemainingAnalyses] = useState<{ used: number; limit: number } | null>(null);
 
   useEffect(() => {
     if (!user) {
       navigate('/signin');
+    } else {
+      loadRemainingAnalyses();
     }
   }, [user, navigate]);
+
+  const loadRemainingAnalyses = async () => {
+    if (!user) return;
+
+    try {
+      // Get subscription info
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('plan_type, daily_analysis_limit, trial_analyses_used')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!subscription) {
+        setRemainingAnalyses({ used: 0, limit: 3 });
+        return;
+      }
+
+      // Use the check_daily_analysis_limit function to get accurate data
+      const { data: limitData, error: limitError } = await supabase.rpc('check_daily_analysis_limit', {
+        p_user_id: user.id
+      });
+
+      if (limitError) {
+        console.error('Error loading remaining analyses:', limitError);
+        setRemainingAnalyses({ used: 0, limit: 3 });
+        return;
+      }
+
+      if (limitData) {
+        setRemainingAnalyses({ 
+          used: limitData.used || 0, 
+          limit: limitData.limit || 3 
+        });
+      } else {
+        setRemainingAnalyses({ used: 0, limit: 3 });
+      }
+    } catch (error) {
+      console.error('Error loading remaining analyses:', error);
+      setRemainingAnalyses({ used: 0, limit: 3 });
+    }
+  };
 
   async function sendDreamToN8N(dreamText: string, userId: string, language: 'tr' | 'en' = 'tr') {
     try {
@@ -77,6 +121,25 @@ export default function Analyze() {
     setError(null);
 
     try {
+      // Check if user has any pending or processing dreams
+      const { data: pendingDreams, error: pendingError } = await supabase
+        .from('dreams')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'processing']);
+
+      if (pendingError) {
+        console.error('Error checking pending dreams:', pendingError);
+      } else if (pendingDreams && pendingDreams.length > 0) {
+        const errorMessage = language === 'tr' 
+          ? 'Lütfen önce mevcut rüya analizinizin tamamlanmasını bekleyin. Analiz tamamlandıktan sonra yeni bir rüya analiz edebilirsiniz.'
+          : 'Please wait for your current dream analysis to complete first. You can analyze a new dream after the current analysis is finished.';
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
       // Check if user can submit analysis (trial expired check)
       const { data: canSubmit, error: checkError } = await supabase.rpc('can_user_submit_analysis', {
         p_user_id: user.id
@@ -102,6 +165,23 @@ export default function Analyze() {
       } else if (trialLimitOk === false) {
         setError('Trial analiz hakkınız dolmuş. Daha fazla analiz için lütfen standart veya premium paket satın alın.');
         showToast('Trial analiz hakkınız dolmuş. Paket satın almak için Pricing sayfasına gidin.', 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check daily analysis limit (for standard and premium users)
+      const { data: dailyLimitData, error: dailyLimitError } = await supabase.rpc('check_daily_analysis_limit', {
+        p_user_id: user.id
+      });
+
+      if (dailyLimitError) {
+        console.error('Error checking daily limit:', dailyLimitError);
+      } else if (dailyLimitData && !dailyLimitData.is_trial && !dailyLimitData.can_analyze) {
+        const errorMessage = t.analyze.dailyLimitExceeded
+          .replace('{used}', dailyLimitData.used.toString())
+          .replace('{limit}', dailyLimitData.limit.toString());
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
         setIsSubmitting(false);
         return;
       }
@@ -157,6 +237,16 @@ export default function Analyze() {
         console.error("Failed to increment trial analyses:", trialIncrementError);
       }
 
+      // Increment daily analysis count (for standard and premium users)
+      try {
+        await supabase.rpc('increment_daily_analysis', {
+          p_user_id: user.id
+        });
+      } catch (dailyIncrementError) {
+        // Log error but don't fail the submission
+        console.error("Failed to increment daily analysis:", dailyIncrementError);
+      }
+
       // Then send to N8N webhook with language info
       try {
         await sendDreamToN8N(dreamText, user.id, language);
@@ -171,6 +261,9 @@ export default function Analyze() {
 
       setDreamText('');
       showToast('Dream saved successfully! Analysis will be ready soon.', 'success');
+      
+      // Reload remaining analyses after successful submission
+      await loadRemainingAnalyses();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save dream';
       setError(errorMessage);
@@ -206,7 +299,12 @@ export default function Analyze() {
         {!analysis ? (
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto animate-fade-in-delay">
             <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-2xl p-5 md:p-8 relative hover:border-pink-500/30 transition-all duration-300 shadow-xl shadow-pink-500/5">
-              <div className="absolute -top-3 right-4 md:right-6">
+              <div className="absolute -top-3 right-4 md:right-6 flex gap-2 items-center">
+                {remainingAnalyses && (
+                  <div className="px-3 py-1 bg-slate-800/80 border border-purple-500/30 rounded-full text-purple-300 text-xs font-semibold">
+                    {remainingAnalyses.used}/{remainingAnalyses.limit}
+                  </div>
+                )}
                 <button
                   onClick={() => navigate('/pricing')}
                   className="px-2 md:px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold rounded-full shadow-lg animate-pulse hover:from-purple-500 hover:to-pink-500 transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -314,10 +412,8 @@ export default function Analyze() {
           <div className="max-w-6xl mx-auto animate-fade-in">
             <div className="max-w-4xl mx-auto">
               <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6 md:p-8 backdrop-blur-sm">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center border border-pink-500/30">
-                    <Sparkles className="text-pink-400" size={20} />
-                  </div>
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <Loader2 className="animate-spin text-pink-400" size={32} />
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-white mb-2">
                       {t.analyze.processingTitle}
@@ -336,17 +432,6 @@ export default function Analyze() {
                     <BookOpen size={18} />
                     <span>{t.analyze.goToLibrary}</span>
                     <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      setAnalysis(null);
-                      setImageUrl(null);
-                    }}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 hover:from-purple-500/90 hover:to-pink-500/90 text-white border border-purple-500/30 hover:border-purple-400/50 rounded-xl font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/30 hover:scale-105"
-                  >
-                    <Sparkles size={18} />
-                    <span>{t.analyze.analyzeAnother}</span>
                   </button>
                 </div>
               </div>

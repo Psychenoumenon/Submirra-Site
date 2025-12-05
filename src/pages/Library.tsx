@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { BookOpen, Calendar, Loader2, Search, Trash2, Heart, ChevronLeft, ChevronRight, X, Download, Globe, Lock } from 'lucide-react';
+import { BookOpen, Calendar, Loader2, Search, Trash2, Heart, ChevronLeft, ChevronRight, X, Download, Globe, Lock, Star } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -18,6 +18,7 @@ interface Dream {
   image_url: string;
   image_url_2?: string | null;
   image_url_3?: string | null;
+  primary_image_index?: number | null;
   created_at: string;
   status: string;
   is_favorite?: boolean;
@@ -42,6 +43,7 @@ export default function Library() {
     public: 0,
     private: 0,
   });
+  const [isPremium, setIsPremium] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -57,6 +59,18 @@ export default function Library() {
       setFavorites(new Set(JSON.parse(savedFavorites)));
     }
 
+    // Check if user is premium
+    const checkPremium = async () => {
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('plan_type')
+        .eq('user_id', user.id)
+        .single();
+      
+      setIsPremium(subscription?.plan_type === 'premium');
+    };
+    
+    checkPremium();
     loadDreams();
 
     // Set up real-time subscription for instant updates
@@ -325,13 +339,77 @@ export default function Library() {
     }
   };
 
-  // Helper function to get all available images for a dream
-  const getDreamImages = (dream: Dream): string[] => {
+  // Helper function to get original images in order (without reordering)
+  const getOriginalImages = (dream: Dream): string[] => {
     const images: string[] = [];
     if (dream.image_url) images.push(dream.image_url);
     if (dream.image_url_2) images.push(dream.image_url_2);
     if (dream.image_url_3) images.push(dream.image_url_3);
     return images;
+  };
+
+  // Helper function to get all available images for a dream
+  // Primary image (if set) will be first in the array
+  const getDreamImages = (dream: Dream): string[] => {
+    const images = getOriginalImages(dream);
+    
+    // If primary_image_index is set, reorder images to put primary first
+    if (dream.primary_image_index !== null && dream.primary_image_index !== undefined && dream.primary_image_index >= 0 && dream.primary_image_index < images.length) {
+      const primaryImage = images[dream.primary_image_index];
+      images.splice(dream.primary_image_index, 1);
+      images.unshift(primaryImage);
+    }
+    
+    return images;
+  };
+
+  // Function to set primary image for premium users
+  const setPrimaryImage = async (dreamId: string, imageIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!user) return;
+    
+    try {
+      // Check if user is premium
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('plan_type')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (subscription?.plan_type !== 'premium') {
+        showToast('Bu özellik sadece Premium kullanıcılar için geçerlidir.', 'error');
+        return;
+      }
+      
+      // Update primary_image_index
+      const { error } = await supabase
+        .from('dreams')
+        .update({ primary_image_index: imageIndex })
+        .eq('id', dreamId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setDreams(prev => prev.map(dream => 
+        dream.id === dreamId 
+          ? { ...dream, primary_image_index: imageIndex }
+          : dream
+      ));
+      
+      // Reset carousel index to 0 (primary image)
+      setCarouselIndices(prev => ({ ...prev, [dreamId]: 0 }));
+      if (selectedDream?.id === dreamId) {
+        setCarouselIndices(prev => ({ ...prev, [`modal-${dreamId}`]: 0 }));
+      }
+      
+      showToast('Kapak görseli güncellendi', 'success');
+    } catch (error) {
+      console.error('Error setting primary image:', error);
+      showToast('Kapak görseli güncellenemedi', 'error');
+    }
   };
 
   // Handle touch events for mobile swipe
@@ -502,20 +580,22 @@ export default function Library() {
               >
                 {/* Pending/Processing durumunda sadece büyük loading ikonu göster */}
                 {(dream.status === 'pending' || dream.status === 'processing') ? (
-                  <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <div className="relative">
-                      {/* Outer glow rings */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/40 via-pink-500/40 to-blue-500/40 rounded-full blur-2xl animate-pulse scale-150"></div>
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/30 via-pink-400/30 to-blue-400/30 rounded-full blur-xl animate-pulse scale-125" style={{ animationDelay: '0.5s' }}></div>
-                      
-                      {/* Main icon container */}
-                      <div className="relative p-8 bg-gradient-to-br from-purple-500/30 via-pink-500/30 to-blue-500/30 rounded-full backdrop-blur-md shadow-2xl border-2 border-purple-400/50">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/25 via-pink-400/25 to-blue-400/25 rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400/15 via-purple-400/15 to-pink-400/15 rounded-full animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }}></div>
-                        <Loader2 size={80} className="relative animate-spin text-purple-200" strokeWidth={3.5} style={{ 
-                          filter: 'drop-shadow(0 0 16px rgba(196, 181, 253, 0.9)) drop-shadow(0 0 32px rgba(236, 72, 153, 0.7)) drop-shadow(0 0 48px rgba(96, 165, 250, 0.5))',
-                          animationDuration: '1.2s'
-                        }} />
+                  <div className="absolute inset-0 flex items-center justify-center z-20 bg-slate-900/80 backdrop-blur-sm rounded-xl">
+                    <div className="relative w-full h-full min-h-[300px] flex items-center justify-center p-8">
+                      <div className="relative w-full max-w-[200px] h-full max-h-[200px] flex items-center justify-center">
+                        {/* Outer glow rings */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/40 via-pink-500/40 to-blue-500/40 rounded-full blur-2xl animate-pulse scale-150"></div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/30 via-pink-400/30 to-blue-400/30 rounded-full blur-xl animate-pulse scale-125" style={{ animationDelay: '0.5s' }}></div>
+                        
+                        {/* Main icon container - Box with padding */}
+                        <div className="relative w-full h-full min-w-[160px] min-h-[160px] flex items-center justify-center p-8 bg-gradient-to-br from-purple-500/30 via-pink-500/30 to-blue-500/30 rounded-2xl backdrop-blur-md shadow-2xl border-2 border-purple-400/50">
+                          <div className="absolute inset-0 bg-gradient-to-br from-purple-400/25 via-pink-400/25 to-blue-400/25 rounded-2xl animate-spin" style={{ animationDuration: '4s' }}></div>
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/15 via-purple-400/15 to-pink-400/15 rounded-2xl animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }}></div>
+                          <Loader2 size={80} className="relative z-10 animate-spin text-purple-200" strokeWidth={3.5} style={{ 
+                            filter: 'drop-shadow(0 0 16px rgba(196, 181, 253, 0.9)) drop-shadow(0 0 32px rgba(236, 72, 153, 0.7)) drop-shadow(0 0 48px rgba(96, 165, 250, 0.5))',
+                            animationDuration: '1.2s'
+                          }} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -532,6 +612,15 @@ export default function Library() {
                         
                         const currentIndex = carouselIndices[dream.id] || 0;
                         const currentImage = images[currentIndex];
+                        
+                        // Calculate original image index
+                        const originalImages = getOriginalImages(dream);
+                        const currentImageUrl = currentImage;
+                        let originalImageIndex = originalImages.findIndex(img => img === currentImageUrl);
+                        if (originalImageIndex === -1) originalImageIndex = 0;
+                        
+                        // Check if current image is primary
+                        const isPrimary = dream.primary_image_index === originalImageIndex;
                         
                         return (
                           <div 
@@ -614,6 +703,33 @@ export default function Library() {
                       {/* Butonlar görselin altında, kompakt - sadece completed durumunda göster */}
                       {dream.status === 'completed' && (
                         <div className="flex gap-1.5 mt-4 mb-4 justify-end flex-wrap">
+                          {/* Primary Image Button - Only for premium users with multiple images */}
+                          {(() => {
+                            const images = getDreamImages(dream);
+                            if (isPremium && images.length > 1) {
+                              const originalImages = getOriginalImages(dream);
+                              const currentIndex = carouselIndices[dream.id] || 0;
+                              const currentImage = images[currentIndex];
+                              let originalImageIndex = originalImages.findIndex(img => img === currentImage);
+                              if (originalImageIndex === -1) originalImageIndex = 0;
+                              const isPrimary = dream.primary_image_index === originalImageIndex;
+                              
+                              return (
+                                <button
+                                  onClick={(e) => setPrimaryImage(dream.id, originalImageIndex, e)}
+                                  className={`p-2 rounded-lg border transition-all duration-300 hover:scale-110 ${
+                                    isPrimary
+                                      ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/30'
+                                      : 'bg-slate-800/80 border-slate-700/50 text-slate-400 hover:border-yellow-500/50 hover:text-yellow-400 hover:bg-slate-700/50'
+                                  }`}
+                                  title={isPrimary ? 'Kapak görseli' : 'Kapak görseli olarak seç'}
+                                >
+                                  <Star size={16} className={isPrimary ? 'fill-current' : ''} />
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
                           {(() => {
                             const images = getDreamImages(dream);
                             if (images.length > 0) {
@@ -728,8 +844,17 @@ export default function Library() {
                   const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
                   const currentImage = images[modalIndex];
                   
+                  // Calculate original image index for modal
+                  const originalImages = getOriginalImages(selectedDream);
+                  const currentImageUrl = currentImage;
+                  let originalImageIndex = originalImages.findIndex(img => img === currentImageUrl);
+                  if (originalImageIndex === -1) originalImageIndex = 0;
+                  
+                  // Check if current image is primary
+                  const isPrimary = selectedDream.primary_image_index === originalImageIndex;
+                  
                   return (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center relative">
                       <img
                         src={currentImage}
                         alt="Dream visualization"
@@ -814,6 +939,36 @@ export default function Library() {
 
                   {/* Action buttons in modal */}
                   <div className="pt-6 border-t border-purple-500/20 flex gap-2 flex-wrap">
+                    {/* Primary Image Button - Only for premium users with multiple images */}
+                    {(() => {
+                      const images = getDreamImages(selectedDream);
+                      if (isPremium && images.length > 1) {
+                        const originalImages = getOriginalImages(selectedDream);
+                        const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
+                        const currentImage = images[modalIndex];
+                        let originalImageIndex = originalImages.findIndex(img => img === currentImage);
+                        if (originalImageIndex === -1) originalImageIndex = 0;
+                        const isPrimary = selectedDream.primary_image_index === originalImageIndex;
+                        
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPrimaryImage(selectedDream.id, originalImageIndex, e);
+                            }}
+                            className={`p-2.5 rounded-lg border transition-all duration-300 hover:scale-110 ${
+                              isPrimary
+                                ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/30'
+                                : 'bg-slate-800/80 border-slate-700/50 text-slate-400 hover:border-yellow-500/50 hover:text-yellow-400 hover:bg-slate-700/50'
+                            }`}
+                            title={isPrimary ? 'Kapak görseli' : 'Kapak görseli olarak seç'}
+                          >
+                            <Star size={18} className={isPrimary ? 'fill-current' : ''} />
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

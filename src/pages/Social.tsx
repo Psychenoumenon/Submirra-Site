@@ -18,6 +18,7 @@ interface PublicDream {
   image_url: string;
   image_url_2?: string | null;
   image_url_3?: string | null;
+  primary_image_index?: number | null;
   created_at: string;
   user_id: string;
   status?: string;
@@ -73,14 +74,30 @@ export default function Social() {
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
-  // Helper function to get all available images for a dream
-  const getDreamImages = (dream: PublicDream): string[] => {
+  // Helper function to get original images in order (without reordering)
+  const getOriginalImages = (dream: PublicDream): string[] => {
     const images: string[] = [];
     if (dream.image_url) images.push(dream.image_url);
     if (dream.image_url_2) images.push(dream.image_url_2);
     if (dream.image_url_3) images.push(dream.image_url_3);
     return images;
   };
+
+  // Helper function to get all available images for a dream
+  // Primary image (if set) will be first in the array
+  const getDreamImages = (dream: PublicDream): string[] => {
+    const images = getOriginalImages(dream);
+    
+    // If primary_image_index is set, reorder images to put primary first
+    if (dream.primary_image_index !== null && dream.primary_image_index !== undefined && dream.primary_image_index >= 0 && dream.primary_image_index < images.length) {
+      const primaryImage = images[dream.primary_image_index];
+      images.splice(dream.primary_image_index, 1);
+      images.unshift(primaryImage);
+    }
+    
+    return images;
+  };
+
 
   // Handle touch events for mobile swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -1255,7 +1272,7 @@ export default function Social() {
                   const currentImage = images[modalIndex];
                   
                   return (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center relative">
                       <img
                         src={currentImage}
                         alt="Dream visualization"

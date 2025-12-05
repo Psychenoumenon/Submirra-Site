@@ -25,7 +25,7 @@ export default function Notifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -106,7 +106,7 @@ export default function Notifications() {
 
       // Show toast notification
       if (formattedNotification.type === 'dream_completed') {
-        showToast('Your dream analysis is ready!', 'success');
+        showToast(t.notifications.dreamCompletedToast, 'success');
       }
     } catch (error) {
       console.error('Error adding new notification:', error);
@@ -221,7 +221,7 @@ export default function Notifications() {
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
-      showToast('Failed to delete notification', 'error');
+      showToast(t.notifications.deleteError, 'error');
     }
   };
 
@@ -241,10 +241,10 @@ export default function Notifications() {
         prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
       );
       setUnreadCount(0);
-      showToast('All notifications marked as read', 'success');
+      showToast(t.notifications.markAllReadSuccess, 'success');
     } catch (error) {
       console.error('Error marking all as read:', error);
-      showToast('Failed to mark all as read', 'error');
+      showToast(t.notifications.markAllReadError, 'error');
     }
   };
 
@@ -307,23 +307,23 @@ export default function Notifications() {
 
   const getNotificationText = (notification: Notification) => {
     if (notification.type === 'dream_completed') {
-      return 'Your dream analysis is ready! Click to view in your library.';
+      return t.notifications.dreamCompleted;
     }
     
     if (notification.type === 'trial_expired') {
-      return 'Your 3-day free trial has expired. Upgrade to continue using Submirra!';
+      return t.notifications.trialExpired;
     }
     
-    const name = notification.actor_profile?.full_name || notification.actor_profile?.username || 'Someone';
+    const name = notification.actor_profile?.full_name || notification.actor_profile?.username || t.notifications.someone;
     switch (notification.type) {
       case 'like':
-        return `${name} liked your dream`;
+        return `${name} ${t.notifications.someoneLiked}`;
       case 'comment':
-        return `${name} commented on your dream`;
+        return `${name} ${t.notifications.someoneCommented}`;
       case 'follow':
-        return `${name} started following you`;
+        return `${name} ${t.notifications.someoneFollowed}`;
       default:
-        return 'New notification';
+        return t.notifications.newNotification;
     }
   };
 
@@ -335,12 +335,13 @@ export default function Notifications() {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
+    if (minutes < 1) return t.notifications.justNow;
+    if (minutes < 60) return `${minutes} ${t.notifications.minutesAgo}`;
+    if (hours < 24) return `${hours} ${t.notifications.hoursAgo}`;
+    if (days < 7) return `${days} ${t.notifications.daysAgo}`;
     
-    return date.toLocaleDateString('en-US', {
+    const locale = language === 'tr' ? 'tr-TR' : 'en-US';
+    return date.toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
@@ -369,9 +370,9 @@ export default function Notifications() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-12 w-[500px] max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+          <div className="absolute right-0 top-12 w-[600px] max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-w-[95vw]">
             <div className="p-5 border-b border-purple-500/20 flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-white">Notifications</h3>
+              <h3 className="text-xl font-semibold text-white">{t.notifications.title}</h3>
               <div className="flex gap-2 items-center">
                 {notifications.length > 0 && (
                   <button
@@ -388,7 +389,7 @@ export default function Notifications() {
                     onClick={markAllAsRead}
                     className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1 rounded hover:bg-purple-500/10"
                   >
-                    Mark all read
+                    {t.notifications.markAllRead}
                   </button>
                 )}
                 <button
@@ -400,7 +401,7 @@ export default function Notifications() {
               </div>
             </div>
 
-            <div className="overflow-y-auto flex-1">
+            <div className="overflow-y-auto flex-1 scrollbar-hide">
               {loading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="animate-spin text-purple-400" size={24} />
@@ -408,7 +409,7 @@ export default function Notifications() {
               ) : notifications.length === 0 ? (
                 <div className="text-center py-12">
                   <Bell className="mx-auto mb-4 text-slate-600" size={48} />
-                  <p className="text-slate-400">No notifications yet</p>
+                  <p className="text-slate-400">{t.notifications.noNotifications}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-purple-500/10">
@@ -421,23 +422,27 @@ export default function Notifications() {
                     >
                       <button
                         onClick={() => handleNotificationClick(notification)}
-                        className="w-full p-5 text-left hover:bg-slate-950/50 transition-colors"
+                        className="w-full p-3 text-left hover:bg-slate-950/50 transition-colors"
                       >
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 mt-1">
-                            {getNotificationIcon(notification.type)}
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex gap-2.5 items-start">
+                            <div className="flex-shrink-0 mt-0.5">
+                              {getNotificationIcon(notification.type)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-xs leading-relaxed break-words break-all overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}>
+                                {getNotificationText(notification)}
+                              </p>
+                            </div>
+                            {!notification.read_at && (
+                              <div className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-0.5" />
+                            )}
                           </div>
-                          <div className="flex-1 min-w-0 pr-8">
-                            <p className="text-white text-sm leading-relaxed mb-2 break-words">
-                              {getNotificationText(notification)}
-                            </p>
-                            <p className="text-slate-400 text-xs">
+                          <div className="flex items-center gap-2 pl-5">
+                            <p className="text-slate-400 text-xs whitespace-nowrap">
                               {formatDate(notification.created_at)}
                             </p>
                           </div>
-                          {!notification.read_at && (
-                            <div className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-2" />
-                          )}
                         </div>
                       </button>
                       <button
