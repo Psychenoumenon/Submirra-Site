@@ -53,6 +53,17 @@ export default function Messages() {
   const [selectedUserProfile, setSelectedUserProfile] = useState<Conversation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Check URL for user parameter and auto-select conversation
+  useEffect(() => {
+    if (user) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const userIdParam = urlParams.get('user');
+      if (userIdParam && userIdParam !== selectedConversation) {
+        setSelectedConversation(userIdParam);
+      }
+    }
+  }, [user, selectedConversation]);
+
   useEffect(() => {
     try {
       if (!user) {
@@ -234,7 +245,10 @@ export default function Messages() {
               created_at
             )
           `)
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
+          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .eq('receiver_id', partnerId)
+          .or(`sender_id.eq.${partnerId},receiver_id.eq.${partnerId}`)
+          .eq('sender_id', user.id)
           .order('created_at', { ascending: true });
 
         if (error) {
@@ -791,8 +805,8 @@ export default function Messages() {
             created_at
           )
         `)
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
-        .order('created_at', { ascending: true });
+          .or(`sender_id.eq.${user.id}.and.receiver_id.eq.${partnerId},sender_id.eq.${partnerId}.and.receiver_id.eq.${user.id}`)
+          .order('created_at', { ascending: true });
 
       if (error) {
         console.error('❌ Error loading messages:', error);

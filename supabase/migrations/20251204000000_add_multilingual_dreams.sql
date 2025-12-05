@@ -59,3 +59,6 @@ WHERE dream_text_tr IS NULL OR analysis_text_tr IS NULL;
 -- Create index for better query performance
 CREATE INDEX IF NOT EXISTS idx_dreams_user_id_created_at ON dreams(user_id, created_at DESC);
 
+
+
+

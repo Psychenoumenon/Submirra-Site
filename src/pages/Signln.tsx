@@ -174,7 +174,7 @@ export default function SignIn() {
           </p>
         </div>
 
-        <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-5 md:p-8 hover:border-purple-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 animate-fade-in-delay">
+        <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-5 md:p-8 hover:border-purple-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 animate-slide-down">
           <div className="flex gap-2 mb-6 md:mb-8">
             <button
               onClick={() => {

@@ -69,7 +69,7 @@ export default function Navigation() {
             <Logo />
           </div>
 
-          <div className="hidden lg:flex items-center gap-4 flex-shrink-0 whitespace-nowrap ml-12">
+          <div className="hidden lg:flex items-center gap-4 flex-shrink-0 whitespace-nowrap flex-1 justify-center">
             {navItems.map((item) => (
               <button
                 key={item.path}
@@ -172,31 +172,33 @@ export default function Navigation() {
         </div>
 
         {isMobileMenuOpen && (
-          <div className="lg:hidden mt-4 pb-4 border-t border-pink-500/20 pt-4">
+          <div className="lg:hidden mt-4 pb-4 border-t border-pink-500/20 pt-4 animate-slide-down">
             <div className="flex flex-col gap-3">
-              {navItems.map((item) => (
+              {navItems.map((item, index) => (
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item.path)}
-                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 animate-fade-in ${
                     currentPage === item.path
                       ? 'bg-pink-500/10 text-pink-400'
                       : 'text-slate-300 hover:bg-slate-800/50 hover:text-pink-400'
                   }`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   {item.label}
                 </button>
               ))}
 
-              {userNavItems.map((item) => (
+              {userNavItems.map((item, index) => (
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item.path)}
-                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 animate-fade-in ${
                     currentPage === item.path
                       ? 'bg-pink-500/10 text-pink-400'
                       : 'text-slate-300 hover:bg-slate-800/50 hover:text-pink-400'
                   }`}
+                  style={{ animationDelay: `${(navItems.length + index) * 0.05}s` }}
                 >
                   {item.label}
                 </button>
@@ -207,9 +209,10 @@ export default function Navigation() {
                   navigate('/pricing');
                   setIsMobileMenuOpen(false);
                 }}
-                className={`text-left px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 ${
+                className={`text-left px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 animate-fade-in ${
                   currentPage === '/pricing' ? 'ring-2 ring-pink-400' : ''
                 }`}
+                style={{ animationDelay: `${(navItems.length + userNavItems.length) * 0.05}s` }}
               >
                 {t.nav.buy}
               </button>
@@ -221,7 +224,8 @@ export default function Navigation() {
                       navigate('/profile');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:bg-slate-800/70 hover:text-pink-400 transition-all duration-200"
+                    className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:bg-slate-800/70 hover:text-pink-400 transition-all duration-200 animate-fade-in"
+                    style={{ animationDelay: `${(navItems.length + userNavItems.length + 1) * 0.05}s` }}
                   >
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden">
                       {userProfile?.avatar_url ? (
@@ -241,7 +245,8 @@ export default function Navigation() {
                       signOut();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 transition-all duration-200"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 transition-all duration-200 animate-fade-in"
+                    style={{ animationDelay: `${(navItems.length + userNavItems.length + 2) * 0.05}s` }}
                   >
                     <LogOut size={16} />
                     {t.nav.signOut}
@@ -253,9 +258,10 @@ export default function Navigation() {
                     navigate('/signin');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`text-left px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 ${
+                  className={`text-left px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 animate-fade-in ${
                     currentPage === '/signin' ? 'ring-2 ring-pink-400' : ''
                   }`}
+                  style={{ animationDelay: `${(navItems.length + userNavItems.length + 1) * 0.05}s` }}
                 >
                   {t.nav.signIn}
                 </button>

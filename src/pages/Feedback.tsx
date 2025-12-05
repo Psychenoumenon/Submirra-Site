@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Loader2, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../lib/i18n';
 import { useAuth } from '../lib/AuthContext';
@@ -14,6 +14,13 @@ export default function Feedback() {
   const [category, setCategory] = useState<'bug' | 'feature' | 'improvement' | 'other'>('other');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  
+  const EMAILJS_PUBLIC_KEY = 'AdvA9XekMYHYYOhcF';
+  
+  // Initialize EmailJS on component mount
+  useEffect(() => {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,23 +47,51 @@ export default function Feedback() {
 
       // Send email notification
       try {
+        // Template'de tanımlı olan parametreleri kullan: {{name}}, {{email}}, {{time}}, {{message}}
         const templateParams = {
-          from_name: user?.email || 'Anonymous User',
-          from_email: user?.email || 'no-reply@submirra.ai',
-          subject: `Feedback: ${category}`,
-          message: feedback.trim(),
-          category: category,
-          user_id: user?.id || 'Not logged in',
-          to_email: 'submirra.ai@gmail.com',
-          reply_to: user?.email || 'no-reply@submirra.ai',
+          name: user?.email || 'Anonymous User',
+          email: user?.email || 'no-reply@submirra.ai',
+          time: new Date().toLocaleString('tr-TR', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }),
+          message: `Kategori: ${category}\n\n${feedback.trim()}`,
         };
 
         const serviceId = 'service_6btsv5d';
-        const templateId = 'template_feedback';
-        const publicKey = 'AdvA9XekMYHYYOhcF';
+        const templateId = 'template_x7aji5u'; // Aynı template'i kullan (veya Feedback için ayrı template oluştur)
 
-        await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        await emailjs.send(serviceId, templateId, templateParams);
         console.log('✅ Feedback email sent successfully');
+        
+        // Mesajı Submirra'nın ana hesabına site içi mesajlaşma sistemine kaydet
+        if (user) {
+          try {
+            const SUBMIRRA_USER_ID = 'ded2c1c6-7064-499f-a1e7-a8f90c95904a';
+            const messageText = `💬 Feedback: ${category}\n\nKullanıcı: ${user.email || 'Anonymous'}\nKategori: ${category}\n\nMesaj:\n${feedback.trim()}`;
+            
+            const { error: messageError } = await supabase
+              .from('messages')
+              .insert({
+                sender_id: user.id,
+                receiver_id: SUBMIRRA_USER_ID,
+                message_text: messageText,
+              });
+            
+            if (messageError) {
+              console.error('❌ Feedback mesaj kaydetme hatası:', messageError);
+              // Email gönderildi ama mesaj kaydedilemedi, yine de başarılı say
+            } else {
+              console.log('✅ Feedback mesajı site içi mesajlaşma sistemine kaydedildi');
+            }
+          } catch (messageError) {
+            console.error('❌ Feedback mesaj kaydetme hatası:', messageError);
+            // Email gönderildi ama mesaj kaydedilemedi, yine de başarılı say
+          }
+        }
       } catch (emailError) {
         console.error('❌ EmailJS Error (feedback):', emailError);
         // Don't fail the submission if email fails

@@ -1,12 +1,17 @@
-import { Mail, Send, CheckCircle, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, Send, CheckCircle, AlertCircle, MessageCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '../lib/i18n';
 import { useToast } from '../lib/ToastContext';
+import { useAuth } from '../lib/AuthContext';
+import { useNavigate } from '../components/Router';
+import { supabase } from '../lib/supabase';
 import emailjs from '@emailjs/browser';
 
 export default function Contact() {
   const { t } = useLanguage();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,6 +20,14 @@ export default function Contact() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
+  
+  const SUBMIRRA_USER_ID = 'ded2c1c6-7064-499f-a1e7-a8f90c95904a';
+  const EMAILJS_PUBLIC_KEY = 'AdvA9XekMYHYYOhcF';
+  
+  // Initialize EmailJS on component mount
+  useEffect(() => {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,48 +35,108 @@ export default function Contact() {
 
     try {
       // EmailJS ile gerçek email gönderme
+      // Template'de tanımlı olan parametreleri kullan: {{name}}, {{time}}, {{message}}, {{email}}
       const templateParams = {
-        from_name: formData.name,
-        from_email: formData.email,
-        subject: formData.subject,
-        message: formData.message,
-        to_email: 'submirra.ai@gmail.com',
-        reply_to: formData.email,
+        name: formData.name,
+        email: formData.email,
+        time: new Date().toLocaleString('tr-TR', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        message: `${formData.subject ? `Konu: ${formData.subject}\n\n` : ''}${formData.message}`,
       };
 
       // EmailJS servis ayarları
       const serviceId = 'service_6btsv5d';
-      const templateId = 'template_contact';
-      const publicKey = 'AdvA9XekMYHYYOhcF';
+      const templateId = 'template_x7aji5u';
 
       try {
         console.log('📧 EmailJS Gönderiliyor...', {
           serviceId,
           templateId,
-          publicKey,
+          publicKey: EMAILJS_PUBLIC_KEY,
           templateParams
         });
         
-        // EmailJS ile email gönder
-        const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        // EmailJS ile email gönder (public key zaten init ile ayarlandı)
+        const result = await emailjs.send(serviceId, templateId, templateParams);
         
         console.log('✅ EmailJS Başarılı:', result);
+        
+        // Mesajı Submirra'nın ana hesabına site içi mesajlaşma sistemine kaydet
+        if (user) {
+          try {
+            const messageText = `📧 Contact Form Mesajı\n\nİsim: ${formData.name}\nEmail: ${formData.email}\nKonu: ${formData.subject}\n\nMesaj:\n${formData.message}`;
+            
+            const { error: messageError } = await supabase
+              .from('messages')
+              .insert({
+                sender_id: user.id,
+                receiver_id: SUBMIRRA_USER_ID,
+                message_text: messageText,
+              });
+            
+            if (messageError) {
+              console.error('❌ Mesaj kaydetme hatası:', messageError);
+              // Email gönderildi ama mesaj kaydedilemedi, yine de başarılı say
+            } else {
+              console.log('✅ Mesaj site içi mesajlaşma sistemine kaydedildi');
+            }
+          } catch (messageError) {
+            console.error('❌ Mesaj kaydetme hatası:', messageError);
+            // Email gönderildi ama mesaj kaydedilemedi, yine de başarılı say
+          }
+        }
         
     setSubmitted(true);
     setFormData({ name: '', email: '', subject: '', message: '' });
         showToast('Mesajınız başarıyla gönderildi! En kısa sürede size dönüş yapacağız.', 'success');
     setTimeout(() => setSubmitted(false), 5000);
         
-      } catch (emailError) {
+      } catch (emailError: any) {
         console.error('❌ EmailJS Hatası:', emailError);
         
         // Hata detaylarını göster
-        if (emailError instanceof Error) {
-          console.error('Hata mesajı:', emailError.message);
-          showToast(`Email hatası: ${emailError.message}`, 'error');
+        let errorMessage = 'Email gönderilirken bir hata oluştu.';
+        if (emailError?.text) {
+          errorMessage = `Email hatası: ${emailError.text}`;
+        } else if (emailError?.message) {
+          errorMessage = `Email hatası: ${emailError.message}`;
+        } else if (typeof emailError === 'string') {
+          errorMessage = `Email hatası: ${emailError}`;
+        }
+        
+        // EmailJS hatasını daha detaylı logla
+        console.error('EmailJS hata detayları:', {
+          status: emailError?.status,
+          text: emailError?.text,
+          message: emailError?.message,
+          statusText: emailError?.statusText,
+          response: emailError?.response,
+          fullError: emailError
+        });
+        
+        // EmailJS hatasını daha detaylı göster
+        if (emailError?.status === 400) {
+          let detailedError = 'Template parametreleri hatalı olabilir.';
+          
+          // EmailJS response'dan hata mesajını al
+          if (emailError?.text) {
+            detailedError = emailError.text;
+          } else if (emailError?.message) {
+            detailedError = emailError.message;
+          } else if (emailError?.response?.text) {
+            detailedError = emailError.response.text;
+          }
+          
+          console.error('EmailJS 400 hatası detayı:', detailedError);
+          console.error('Gönderilen parametreler:', templateParams);
+          showToast(`EmailJS hatası: ${detailedError}`, 'error');
         } else {
-          console.error('Bilinmeyen hata:', emailError);
-          showToast('Email gönderilirken bilinmeyen bir hata oluştu.', 'error');
+          showToast(errorMessage, 'error');
         }
         
         // Console'a mesajı kaydet
@@ -103,7 +176,7 @@ export default function Contact() {
           </p>
         </div>
 
-        <div className="flex justify-center mb-8 md:mb-12 animate-fade-in-delay">
+        <div className="flex justify-center items-center gap-4 mb-8 md:mb-12 animate-fade-in-delay flex-wrap">
           <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-2xl p-6 md:p-8 hover:border-pink-500/40 transition-all duration-500 md:hover:-translate-y-2 hover:shadow-xl hover:shadow-pink-500/10 max-w-md w-full">
             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-pink-500/20 to-pink-600/20 flex items-center justify-center border border-pink-500/30 mb-3 md:mb-4 mx-auto">
               <Mail className="text-pink-400" size={24} />
@@ -111,6 +184,24 @@ export default function Contact() {
             <h3 className="text-xl md:text-2xl font-semibold text-white mb-2 md:mb-3 text-center">{t.contact.emailSupport}</h3>
             <p className="text-slate-300 text-center text-base md:text-lg break-all">submirra.ai@gmail.com</p>
           </div>
+          
+          <button
+            onClick={() => {
+              if (!user) {
+                showToast(t.contact.pleaseSignInToMessage, 'info');
+                navigate('/signin');
+                return;
+              }
+              navigate('/messages?user=ded2c1c6-7064-499f-a1e7-a8f90c95904a');
+            }}
+            className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 md:p-8 hover:border-purple-500/40 transition-all duration-500 md:hover:-translate-y-2 hover:shadow-xl hover:shadow-purple-500/10 flex flex-col items-center justify-center min-w-[140px] md:min-w-[160px] h-full"
+          >
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/30 mb-3 md:mb-4">
+              <MessageCircle className="text-purple-400" size={24} />
+            </div>
+            <h3 className="text-lg md:text-xl font-semibold text-white mb-2 text-center">{t.contact.messageSubmirra}</h3>
+            <p className="text-slate-300 text-center text-sm md:text-base">{t.contact.viaWebsite}</p>
+          </button>
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-5 md:p-8 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/10 animate-fade-in-delay-2">

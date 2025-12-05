@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -26,6 +26,9 @@ interface PublicDream {
     avatar_url: string | null;
     username?: string;
   };
+  subscriptions?: {
+    plan_type?: 'trial' | 'standard' | 'premium' | null;
+  } | null;
   likes_count: number;
   comments_count: number;
   is_liked: boolean;
@@ -71,6 +74,7 @@ export default function Social() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastDreamElementRef = useRef<HTMLDivElement | null>(null);
   const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -212,6 +216,9 @@ export default function Social() {
             full_name,
             avatar_url,
             username
+          ),
+          subscriptions:user_id (
+            plan_type
           )
         `)
         .eq('is_public', true)
@@ -367,13 +374,26 @@ export default function Social() {
           commentsMap.set(comment.dream_id, (commentsMap.get(comment.dream_id) || 0) + 1);
         });
 
-        const dreamsWithStats = (dreamsData || []).map(dream => ({
-          ...dream,
-          likes_count: likesMap.get(dream.id) || 0,
-          comments_count: commentsMap.get(dream.id) || 0,
-          is_liked: userLikesSet.has(dream.id),
-          profiles: dream.profiles || { full_name: 'Anonymous', avatar_url: null, username: null }
-        }));
+        const dreamsWithStats = (dreamsData || []).map(dream => {
+          // Handle subscriptions - can be array or single object
+          let subscription = null;
+          if (dream.subscriptions) {
+            if (Array.isArray(dream.subscriptions)) {
+              subscription = dream.subscriptions.length > 0 ? dream.subscriptions[0] : null;
+            } else {
+              subscription = dream.subscriptions;
+            }
+          }
+          
+          return {
+            ...dream,
+            likes_count: likesMap.get(dream.id) || 0,
+            comments_count: commentsMap.get(dream.id) || 0,
+            is_liked: userLikesSet.has(dream.id),
+            profiles: dream.profiles || { full_name: 'Anonymous', avatar_url: null, username: null },
+            subscriptions: subscription
+          };
+        });
 
         // Sort by popularity if needed
         if (sortBy === 'popular') {
@@ -987,6 +1007,10 @@ export default function Social() {
                           src={currentImage}
                           alt="Dream visualization"
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 image-clickable cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLightboxImage(currentImage);
+                          }}
                         />
                         
                         {/* Carousel indicators */}
@@ -1093,15 +1117,27 @@ export default function Social() {
                         )}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/profile/${dream.user_id}`);
-                          }}
-                          className="text-white font-semibold text-sm hover:text-purple-300 transition-colors truncate"
-                        >
-                          {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/profile/${dream.user_id}`);
+                            }}
+                            className="text-white font-semibold text-sm hover:text-purple-300 transition-colors truncate"
+                          >
+                            {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
+                          </button>
+                          {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
+                              dream.subscriptions.plan_type === 'premium'
+                                ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
+                                : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
+                            }`}>
+                              <Zap size={8} />
+                              {dream.subscriptions.plan_type === 'premium' ? 'Premium' : 'Standard'}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-white/70 text-xs">{formatDate(dream.created_at)}</p>
                       </div>
                     </div>
@@ -1184,15 +1220,27 @@ export default function Social() {
                       openDreamModal(dream);
                     }}
                   >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/profile/${dream.user_id}`);
-                      }}
-                      className="text-white font-semibold text-sm hover:text-purple-300 transition-colors mr-2"
-                    >
-                      {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile/${dream.user_id}`);
+                        }}
+                        className="text-white font-semibold text-sm hover:text-purple-300 transition-colors"
+                      >
+                        {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
+                      </button>
+                      {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
+                          dream.subscriptions.plan_type === 'premium'
+                            ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
+                            : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
+                        }`}>
+                          <Zap size={8} />
+                          {dream.subscriptions.plan_type === 'premium' ? 'Premium' : 'Standard'}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-white/80 text-sm line-clamp-2">
                       {getDreamText(dream, language)}
                     </span>
@@ -1281,9 +1329,7 @@ export default function Social() {
                         src={currentImage}
                         alt="Dream visualization"
                         className="max-w-full max-h-full object-contain cursor-zoom-in"
-                        onClick={() => {
-                          // Could add lightbox here if needed
-                        }}
+                        onClick={() => setLightboxImage(currentImage)}
                       />
                       
                       {/* Carousel indicators for modal */}
@@ -1457,6 +1503,27 @@ export default function Social() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-2"
+          >
+            <X size={24} />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Dream visualization - full size"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

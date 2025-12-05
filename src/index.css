@@ -63,6 +63,36 @@
   animation: fade-in 0.8s ease-out;
 }
 
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fade-in-fast {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-fast {
+  animation: fade-in-fast 0.3s ease-out both;
+}
+
 .animate-fade-in-delay {
   animation: fade-in 0.8s ease-out 0.2s both;
 }

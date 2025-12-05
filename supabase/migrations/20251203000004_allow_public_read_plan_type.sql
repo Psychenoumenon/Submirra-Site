@@ -9,6 +9,6 @@
 DROP POLICY IF EXISTS "Anyone can view plan_type" ON subscriptions;
 CREATE POLICY "Anyone can view plan_type"
   ON subscriptions FOR SELECT
-  TO authenticated
-  USING (true); -- Allow authenticated users to read plan_type for profile display
+  TO authenticated, anon
+  USING (true); -- Allow all users (authenticated and anonymous) to read plan_type for profile display
 
