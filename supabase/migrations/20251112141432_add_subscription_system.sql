@@ -124,7 +124,7 @@ BEGIN
     NEW.id,
     'trial',
     now(),
-    now() + interval '3 days',
+    now() + interval '5 days',
     0
   );
   RETURN NEW;

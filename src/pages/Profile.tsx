@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles, MoreVertical, Ban, Star, StarOff, Flag, Zap } from 'lucide-react';
+import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles, MoreVertical, Star, StarOff, Flag, Zap, Shield, Ban } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate, useCurrentPage } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
 import { useToast } from '../lib/ToastContext';
 import { supabase } from '../lib/supabase';
+import { isDeveloper } from '../lib/developer';
 
 interface ProfileData {
   full_name: string;
@@ -41,7 +42,7 @@ interface PublicDream {
 }
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const currentPage = useCurrentPage();
   const { t, language } = useLanguage();
@@ -74,64 +75,86 @@ export default function Profile() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [reportCount, setReportCount] = useState<number>(0);
   const [dangerLevel, setDangerLevel] = useState<'low' | 'medium' | 'high' | 'critical'>('low');
+  const [isCurrentUserDeveloper, setIsCurrentUserDeveloper] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadProfileData = async () => {
-      // Get user ID from URL
-      const path = window.location.pathname;
-      let userId: string | null = null;
-      
-      if (path.startsWith('/profile/')) {
-        const parts = path.split('/');
-        userId = parts[2] || null;
-      }
-
-      if (userId) {
-        // Viewing another user's profile
-        setProfileUserId(userId);
-        setIsOwnProfile(user ? userId === user.id : false);
+      try {
+        // Get user ID from URL
+        const path = window.location.pathname;
+        let userId: string | null = null;
         
-        // Load all critical data in parallel for faster loading
-        await Promise.all([
-          loadOtherUserProfile(userId),
-          loadOtherUserStats(userId),
-          loadPublicDreams(userId),
-          ...(user ? [
-            checkFollowingStatus(userId),
-            checkBlockStatus(userId),
-            checkFavoriteStatus(userId),
-          ] : []),
-        ]);
-        
-        // Load report info in background (non-critical, only for admins)
-        loadReportInfo(userId).catch(err => console.error('Report info load error:', err));
-      } else {
-        // Viewing own profile
-        if (!user) {
-          navigate('/signin');
-          return;
+        if (path.startsWith('/profile/')) {
+          const parts = path.split('/');
+          userId = parts[2] || null;
         }
-        setProfileUserId(user.id);
-        setIsOwnProfile(true);
-        
-        // Load all critical data in parallel
-        await Promise.all([
-          loadProfile(),
-          loadStats(),
-          loadPublicDreams(user.id),
-        ]);
-        
-        // Load report info in background (non-critical)
-        loadReportInfo(user.id).catch(err => console.error('Report info load error:', err));
+
+        if (userId) {
+          // Viewing another user's profile
+          setProfileUserId(userId);
+          setIsOwnProfile(user ? userId === user.id : false);
+          
+          // Load all critical data in parallel for faster loading
+          await Promise.all([
+            loadOtherUserProfile(userId),
+            loadOtherUserStats(userId),
+            loadPublicDreams(userId),
+            ...(user ? [
+              checkFollowingStatus(userId),
+              checkBlockStatus(userId),
+              checkFavoriteStatus(userId),
+            ] : []),
+          ]);
+          
+          // Load report info in background (non-critical, only for admins)
+          loadReportInfo(userId).catch(err => console.error('Report info load error:', err));
+        } else {
+          // Viewing own profile
+          // Wait for auth to finish loading before checking user
+          if (authLoading) {
+            setLoading(true);
+            return;
+          }
+          
+          if (!user) {
+            navigate('/signin');
+            setLoading(false);
+            return;
+          }
+          setProfileUserId(user.id);
+          setIsOwnProfile(true);
+          
+          // Load all critical data in parallel
+          await Promise.all([
+            loadProfile(),
+            loadStats(),
+            loadPublicDreams(user.id),
+          ]);
+          
+          // Load report info in background (non-critical)
+          loadReportInfo(user.id).catch(err => console.error('Report info load error:', err));
+        }
+      } catch (error) {
+        console.error('Error loading profile data:', error);
+        showToast('Failed to load profile data', 'error');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     setLoading(true);
     loadProfileData();
+    
+    // Check if current user is developer
+    if (user) {
+      isDeveloper(user.id).then(setIsCurrentUserDeveloper).catch(err => {
+        console.error('Error checking developer status:', err);
+        setIsCurrentUserDeveloper(false);
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, currentPage]);
+  }, [user, authLoading, currentPage]);
 
   const loadProfile = async () => {
     if (!user) return;
@@ -1039,6 +1062,7 @@ export default function Profile() {
     }
   };
 
+
   const handleFollow = async () => {
     if (!user) {
       navigate('/signin');
@@ -1333,7 +1357,7 @@ export default function Profile() {
                   className="fixed inset-0 z-40"
                   onClick={() => setShowProfileMenu(false)}
                 />
-                <div className="absolute right-0 top-10 w-48 bg-slate-900 border border-purple-500/30 rounded-lg shadow-2xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-10 w-48 bg-slate-900 border border-purple-500/30 rounded-lg shadow-2xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
                   {!isOwnProfile && user && (
                     <>
                       <button
@@ -1396,7 +1420,7 @@ export default function Profile() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-white">{reportCount}</span>
-                          <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{
+                          <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center justify-center" style={{
                             backgroundColor: dangerLevel === 'low' ? 'rgba(34, 197, 94, 0.2)' :
                                              dangerLevel === 'medium' ? 'rgba(234, 179, 8, 0.2)' :
                                              dangerLevel === 'high' ? 'rgba(249, 115, 22, 0.2)' :
@@ -1404,7 +1428,10 @@ export default function Profile() {
                             color: dangerLevel === 'low' ? 'rgb(34, 197, 94)' :
                                    dangerLevel === 'medium' ? 'rgb(234, 179, 8)' :
                                    dangerLevel === 'high' ? 'rgb(249, 115, 22)' :
-                                   'rgb(239, 68, 68)'
+                                   'rgb(239, 68, 68)',
+                            textAlign: 'center',
+                            minHeight: '20px',
+                            lineHeight: '1.2'
                           }}>
                             {dangerLevel === 'low' ? t.profile.dangerLow :
                              dangerLevel === 'medium' ? t.profile.dangerMedium :

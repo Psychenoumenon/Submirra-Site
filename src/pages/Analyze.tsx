@@ -7,7 +7,7 @@ import { useToast } from '../lib/ToastContext';
 import { supabase } from '../lib/supabase';
 
 export default function Analyze() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
@@ -20,29 +20,20 @@ export default function Analyze() {
   const [remainingAnalyses, setRemainingAnalyses] = useState<{ used: number; limit: number } | null>(null);
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking user
+    if (loading) return;
+    
     if (!user) {
       navigate('/signin');
     } else {
       loadRemainingAnalyses();
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   const loadRemainingAnalyses = async () => {
     if (!user) return;
 
     try {
-      // Get subscription info
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('plan_type, daily_analysis_limit, trial_analyses_used')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!subscription) {
-        setRemainingAnalyses({ used: 0, limit: 3 });
-        return;
-      }
-
       // Use the check_daily_analysis_limit function to get accurate data
       const { data: limitData, error: limitError } = await supabase.rpc('check_daily_analysis_limit', {
         p_user_id: user.id
@@ -50,21 +41,21 @@ export default function Analyze() {
 
       if (limitError) {
         console.error('Error loading remaining analyses:', limitError);
-        setRemainingAnalyses({ used: 0, limit: 3 });
+        setRemainingAnalyses({ used: 0, limit: 5 });
         return;
       }
 
       if (limitData) {
         setRemainingAnalyses({ 
           used: limitData.used || 0, 
-          limit: limitData.limit || 3 
+          limit: limitData.limit || 5 
         });
       } else {
-        setRemainingAnalyses({ used: 0, limit: 3 });
+        setRemainingAnalyses({ used: 0, limit: 5 });
       }
     } catch (error) {
       console.error('Error loading remaining analyses:', error);
-      setRemainingAnalyses({ used: 0, limit: 3 });
+      setRemainingAnalyses({ used: 0, limit: 5 });
     }
   };
 
@@ -169,21 +160,29 @@ export default function Analyze() {
         return;
       }
 
-      // Check daily analysis limit (for standard and premium users)
-      const { data: dailyLimitData, error: dailyLimitError } = await supabase.rpc('check_daily_analysis_limit', {
+      // Check if user is developer (developers have unlimited analysis)
+      const { data: isDev } = await supabase.rpc('is_developer', {
         p_user_id: user.id
       });
 
-      if (dailyLimitError) {
-        console.error('Error checking daily limit:', dailyLimitError);
-      } else if (dailyLimitData && !dailyLimitData.is_trial && !dailyLimitData.can_analyze) {
-        const errorMessage = t.analyze.dailyLimitExceeded
-          .replace('{used}', dailyLimitData.used.toString())
-          .replace('{limit}', dailyLimitData.limit.toString());
-        setError(errorMessage);
-        showToast(errorMessage, 'error');
-        setIsSubmitting(false);
-        return;
+      // Only check daily limit if user is not a developer
+      if (!isDev) {
+        // Check daily analysis limit (for standard and premium users)
+        const { data: dailyLimitData, error: dailyLimitError } = await supabase.rpc('check_daily_analysis_limit', {
+          p_user_id: user.id
+        });
+
+        if (dailyLimitError) {
+          console.error('Error checking daily limit:', dailyLimitError);
+        } else if (dailyLimitData && !dailyLimitData.is_trial && !dailyLimitData.can_analyze) {
+          const errorMessage = t.analyze.dailyLimitExceeded
+            .replace('{used}', dailyLimitData.used.toString())
+            .replace('{limit}', dailyLimitData.limit.toString());
+          setError(errorMessage);
+          showToast(errorMessage, 'error');
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       // First, save to database with multilingual support
@@ -227,24 +226,27 @@ export default function Analyze() {
         }
       }
 
-      // Increment trial analyses used (if trial user)
-      try {
-        await supabase.rpc('increment_trial_analyses_used', {
-          p_user_id: user.id
-        });
-      } catch (trialIncrementError) {
-        // Log error but don't fail the submission
-        console.error("Failed to increment trial analyses:", trialIncrementError);
-      }
+      // Only increment counters if user is not a developer (isDev already checked above)
+      if (!isDev) {
+        // Increment trial analyses used (if trial user)
+        try {
+          await supabase.rpc('increment_trial_analyses_used', {
+            p_user_id: user.id
+          });
+        } catch (trialIncrementError) {
+          // Log error but don't fail the submission
+          console.error("Failed to increment trial analyses:", trialIncrementError);
+        }
 
-      // Increment daily analysis count (for standard and premium users)
-      try {
-        await supabase.rpc('increment_daily_analysis', {
-          p_user_id: user.id
-        });
-      } catch (dailyIncrementError) {
-        // Log error but don't fail the submission
-        console.error("Failed to increment daily analysis:", dailyIncrementError);
+        // Increment daily analysis count (for standard and premium users)
+        try {
+          await supabase.rpc('increment_daily_analysis', {
+            p_user_id: user.id
+          });
+        } catch (dailyIncrementError) {
+          // Log error but don't fail the submission
+          console.error("Failed to increment daily analysis:", dailyIncrementError);
+        }
       }
 
       // Then send to N8N webhook with language info

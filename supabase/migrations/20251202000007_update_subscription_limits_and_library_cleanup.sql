@@ -3,7 +3,7 @@
   
   Bu migration şunları yapar:
   1. Premium daily_analysis_limit'i 10'dan 5'e düşürür
-  2. Trial kullanıcılar için toplam 3 hak (trial_analyses_used ile kontrol)
+  2. Trial kullanıcılar için toplam 5 hak (trial_analyses_used ile kontrol)
   3. Trial bitince library'deki tüm rüyaları siler
   4. Standard kullanıcılar için 30 günlük temizleme (90 rüya limiti)
   5. Premium kullanıcılar için hiç silinmez (sınırsız)
@@ -21,10 +21,10 @@ BEGIN
   -- Eğer plan_type değiştiyse veya yeni kayıt oluşturuluyorsa, diğer alanları otomatik güncelle
   IF (TG_OP = 'INSERT') OR (NEW.plan_type IS DISTINCT FROM COALESCE(OLD.plan_type, '')) THEN
     NEW.daily_analysis_limit := CASE 
-      WHEN NEW.plan_type = 'trial' THEN 3  -- Trial için toplam 3 (trial_analyses_used ile kontrol edilecek)
+      WHEN NEW.plan_type = 'trial' THEN 5  -- Trial için toplam 5 (trial_analyses_used ile kontrol edilecek)
       WHEN NEW.plan_type = 'standard' THEN 3  -- Standard günlük 3
       WHEN NEW.plan_type = 'premium' THEN 5  -- Premium günlük 5 (10'dan 5'e düşürüldü)
-      ELSE COALESCE(NEW.daily_analysis_limit, 3)
+      ELSE COALESCE(NEW.daily_analysis_limit, 5)
     END;
     
     NEW.visualizations_per_analysis := CASE 
@@ -72,7 +72,7 @@ BEGIN
   SET 
     plan_type = p_plan_type,
     daily_analysis_limit = CASE 
-      WHEN p_plan_type = 'trial' THEN 3
+      WHEN p_plan_type = 'trial' THEN 5
       WHEN p_plan_type = 'standard' THEN 3
       WHEN p_plan_type = 'premium' THEN 5  -- 10'dan 5'e düşürüldü
     END,
@@ -209,7 +209,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. Trial için toplam 3 hak kontrolü yapan fonksiyon
+-- 6. Trial için toplam 5 hak kontrolü yapan fonksiyon
 CREATE OR REPLACE FUNCTION check_trial_analysis_limit(p_user_id uuid)
 RETURNS boolean AS $$
 DECLARE
@@ -226,13 +226,13 @@ BEGIN
     RETURN true;
   END IF;
   
-  -- Trial kullanıcılar için toplam 3 hak kontrolü
+  -- Trial kullanıcılar için toplam 5 hak kontrolü
   IF v_trial_analyses_used IS NULL THEN
     v_trial_analyses_used := 0;
   END IF;
   
-  -- Eğer 3'ten az kullanılmışsa true döndür
-  RETURN v_trial_analyses_used < 3;
+  -- Eğer 5'ten az kullanılmışsa true döndür
+  RETURN v_trial_analyses_used < 5;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -298,7 +298,7 @@ WHERE plan_type = 'premium' AND daily_analysis_limit != 5;
 
 -- Açıklama:
 -- 1. Premium kullanıcılar artık günlük 5 analiz yapabilir (önceden 10)
--- 2. Trial kullanıcılar toplam 3 analiz yapabilir (trial_analyses_used ile kontrol)
+-- 2. Trial kullanıcılar toplam 5 analiz yapabilir (trial_analyses_used ile kontrol)
 -- 3. Trial bitince (trial_end < NOW()) library'deki tüm rüyalar silinir
 -- 4. Trial süresi dolan kullanıcılar, standart/premium paket almadıysa analiz yapamaz
 -- 5. Standard kullanıcılar 90 rüya saklayabilir, subscription_start_date'den itibaren her ay temizlenir

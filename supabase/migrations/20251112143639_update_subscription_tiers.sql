@@ -126,7 +126,7 @@ BEGIN
   SET 
     plan_type = p_plan_type,
     daily_analysis_limit = CASE 
-      WHEN p_plan_type = 'trial' THEN 3
+      WHEN p_plan_type = 'trial' THEN 5
       WHEN p_plan_type = 'standard' THEN 3
       WHEN p_plan_type = 'premium' THEN 10
     END,

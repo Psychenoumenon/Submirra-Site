@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Language = 'en' | 'tr';
 
@@ -134,6 +134,9 @@ interface Translations {
     deleteComment: string;
     endOfFeed: string;
     loadingMore: string;
+    previousImage: string;
+    nextImage: string;
+    close: string;
   };
   profile: {
     title: string;
@@ -304,6 +307,7 @@ interface Translations {
     minutesAgo: string;
     hoursAgo: string;
     daysAgo: string;
+    close: string;
   };
   pricing: {
     title: string;
@@ -486,7 +490,7 @@ const translations: Record<Language, Translations> = {
       contact: 'Contact',
       dashboard: 'Dashboard',
       buy: 'Buy',
-      freeTrial: '3-Day Free Trial',
+      freeTrial: '5-Day Free Trial',
       signIn: 'Sign In',
       signOut: 'Sign Out',
       messages: 'Messages',
@@ -537,7 +541,7 @@ const translations: Record<Language, Translations> = {
       analyzeAnother: 'Analyze Another Dream',
       confirmationMessage: 'Your dream has been saved and will be analyzed shortly.',
       savedMessage: 'Your dream has been saved and will be analyzed shortly.',
-      trialBadge: '3-Day Free Trial',
+      trialBadge: '5-Day Free Trial',
       privacyLabel: 'Privacy',
       privacyPublic: 'Public',
       privacyPrivate: 'Private',
@@ -616,6 +620,9 @@ const translations: Record<Language, Translations> = {
       deleteComment: 'Delete comment',
       endOfFeed: "You've reached the end of the feed",
       loadingMore: 'Loading more...',
+      previousImage: 'Previous image',
+      nextImage: 'Next image',
+      close: 'Close',
     },
     profile: {
       title: 'Profile',
@@ -776,7 +783,7 @@ const translations: Record<Language, Translations> = {
       noNotifications: 'No notifications yet',
       dreamCompleted: 'Your dream analysis is ready! Click to view in your library.',
       dreamCompletedToast: 'Your dream analysis is ready!',
-      trialExpired: 'Your 3-day free trial has expired. Upgrade to continue using Submirra!',
+      trialExpired: 'Your 5-day free trial has expired. Upgrade to continue using Submirra!',
       someoneLiked: 'liked your dream',
       someoneCommented: 'commented on your dream',
       someoneFollowed: 'started following you',
@@ -794,8 +801,8 @@ const translations: Record<Language, Translations> = {
         title: 'Free Trial',
         price: 'Free',
         description: 'Perfect for exploring what Submirra can do',
-        feature1: '3 days of access',
-        feature2: '3 dream analyses total',
+        feature1: '5 days of access',
+        feature2: '5 dream analyses total',
         feature3: '',
         feature4: 'Beautiful visualizations for your dreams',
         cta: 'Start Free Trial',
@@ -832,29 +839,29 @@ const translations: Record<Language, Translations> = {
       },
     },
     trial: {
-      activateTitle: 'Activate Your 3-Day Free Trial',
-      activateDesc: 'Experience the full power of Submirra with unlimited access for 3 days',
+      activateTitle: 'Activate Your 5-Day Free Trial',
+      activateDesc: 'Experience the full power of Submirra with unlimited access for 5 days',
       activateNow: 'Activate Free Trial',
       activating: 'Activating...',
       activated: 'Trial Activated!',
-      activatedDesc: 'Your 3-day free trial has been successfully activated.',
-      enjoy3Days: 'Enjoy 3 days of unlimited dream analysis and insights!',
+      activatedDesc: 'Your 5-day free trial has been successfully activated.',
+      enjoy3Days: 'Enjoy 5 days of unlimited dream analysis and insights!',
       alreadyUsed: 'Trial Already Used',
       alreadyUsedDesc: 'You have already used your free trial. Upgrade to a paid plan to continue enjoying Submirra.',
       viewPlans: 'View Plans',
       whatsIncluded: 'What\'s Included:',
-      feature1: '3 days of full access to all features',
+      feature1: '5 days of full access to all features',
       feature2: '3 dream analyses with deep insights',
       feature3: 'Beautiful visualizations for your dreams',
       duration: 'Duration',
-      threeDays: '3 Days',
+      threeDays: '5 Days',
       analyses: 'Analyses',
       threeAnalyses: '3 Dreams',
       features: 'Features',
       fullAccess: 'Full Access',
       startAnalyzing: 'Start Analyzing Dreams',
       trialExpired: 'Trial Expired',
-      trialExpiredDesc: 'Your 3-day free trial has expired. Upgrade to continue.',
+      trialExpiredDesc: 'Your 5-day free trial has expired. Upgrade to continue.',
       ipAlreadyUsed: 'This IP address has already used a free trial. Each person can only get one free trial.',
       ipCheckFailed: 'Could not verify eligibility. Please try again.',
     },
@@ -889,7 +896,7 @@ const translations: Record<Language, Translations> = {
       paymentText: 'We offer flexible subscription plans to suit your needs:',
       paymentFeature1: 'Monthly subscriptions can be cancelled at any time',
       paymentFeature2: 'You\'ll be notified 7 days before your subscription renews',
-      paymentFeature3: 'We offer a 3-day free trial so you can explore all features risk-free',
+      paymentFeature3: 'We offer a 5-day free trial so you can explore all features risk-free',
       terminationTitle: '7. Account Termination',
       terminationText: 'We may suspend accounts that violate our community guidelines or engage in harmful behavior. We always aim to resolve issues fairly and will notify you if any action is taken on your account.',
       contactTitle: '8. Contact Information',
@@ -966,7 +973,7 @@ const translations: Record<Language, Translations> = {
       contact: 'İletişim',
       dashboard: 'Kontrol Paneli',
       buy: 'Satın Al',
-      freeTrial: '3 Günlük Deneme',
+      freeTrial: '5 Günlük Deneme',
       signIn: 'Giriş Yap',
       signOut: 'Çıkış Yap',
       messages: 'Mesajlar',
@@ -1017,7 +1024,7 @@ const translations: Record<Language, Translations> = {
       analyzeAnother: 'Başka Bir Rüya Analiz Et',
       confirmationMessage: 'Rüyanız kaydedildi ve kısa süre içinde analiz edilecek.',
       savedMessage: 'Rüyanız kaydedildi ve kısa süre içinde analiz edilecek.',
-      trialBadge: '3 Günlük Ücretsiz Deneme',
+      trialBadge: '5 Günlük Ücretsiz Deneme',
       privacyLabel: 'Gizlilik',
       privacyPublic: 'Herkese Açık',
       privacyPrivate: 'Özel',
@@ -1096,6 +1103,9 @@ const translations: Record<Language, Translations> = {
       deleteComment: 'Yorumu sil',
       endOfFeed: 'Akışın sonuna ulaştınız',
       loadingMore: 'Daha fazla yükleniyor...',
+      previousImage: 'Önceki görsel',
+      nextImage: 'Sonraki görsel',
+      close: 'Kapat',
     },
     profile: {
       title: 'Profil',
@@ -1259,7 +1269,7 @@ const translations: Record<Language, Translations> = {
       noNotifications: 'Henüz bildirim yok',
       dreamCompleted: 'Rüya analiziniz hazır! Kütüphanenizde görüntülemek için tıklayın.',
       dreamCompletedToast: 'Rüya analiziniz hazır!',
-      trialExpired: '3 günlük ücretsiz denemeniz sona erdi. Submirra\'yı kullanmaya devam etmek için yükseltin!',
+      trialExpired: '5 günlük ücretsiz denemeniz sona erdi. Submirra\'yı kullanmaya devam etmek için yükseltin!',
       someoneLiked: 'rüyanızı beğendi',
       someoneCommented: 'rüyanıza yorum yaptı',
       someoneFollowed: 'sizi takip etmeye başladı',
@@ -1269,6 +1279,7 @@ const translations: Record<Language, Translations> = {
       minutesAgo: 'dakika önce',
       hoursAgo: 'saat önce',
       daysAgo: 'gün önce',
+      close: 'Kapat',
     },
     pricing: {
       title: 'Basit ve Şeffaf Fiyatlandırma',
@@ -1277,8 +1288,8 @@ const translations: Record<Language, Translations> = {
         title: 'Ücretsiz Deneme',
         price: 'Ücretsiz',
         description: 'Submirra\'nın neler yapabileceğini keşfetmek için mükemmel',
-        feature1: '3 gün erişim',
-        feature2: 'Toplam 3 rüya analizi',
+        feature1: '5 gün erişim',
+        feature2: 'Toplam 5 rüya analizi',
         feature3: '',
         feature4: 'Rüyalarınız için güzel görselleştirmeler',
         cta: 'Ücretsiz Deneyin',
@@ -1286,7 +1297,7 @@ const translations: Record<Language, Translations> = {
       },
       standard: {
         title: 'Standart',
-        price: '₺638',
+        price: '₺600',
         period: 'ay',
         description: 'Düzenli rüya günlüğü ve içgörüler için harika',
         feature1: 'Günde 3 rüya analizi',
@@ -1299,7 +1310,7 @@ const translations: Record<Language, Translations> = {
       premium: {
         badge: 'En Popüler',
         title: 'Premium',
-        price: '₺1,275',
+        price: '₺1,200',
         period: 'ay',
         description: 'Sınırsız kütüphane ve çoklu görselleştirmelerle bilinçaltınızın kilidini tamamen açın',
         feature1: 'Günde 5 rüya analizi',
@@ -1315,29 +1326,29 @@ const translations: Record<Language, Translations> = {
       },
     },
     trial: {
-      activateTitle: '3 Günlük Ücretsiz Denemenizi Etkinleştirin',
-      activateDesc: 'Submirra\'nın tüm gücünü 3 gün boyunca sınırsız erişimle deneyimleyin',
+      activateTitle: '5 Günlük Ücretsiz Denemenizi Etkinleştirin',
+      activateDesc: 'Submirra\'nın tüm gücünü 5 gün boyunca sınırsız erişimle deneyimleyin',
       activateNow: 'Ücretsiz Denemeyi Başlat',
       activating: 'Etkinleştiriliyor...',
       activated: 'Deneme Etkinleştirildi!',
-      activatedDesc: '3 günlük ücretsiz denemeniz başarıyla etkinleştirildi.',
-      enjoy3Days: '3 gün boyunca sınırsız rüya analizi ve içgörülerin tadını çıkarın!',
+      activatedDesc: '5 günlük ücretsiz denemeniz başarıyla etkinleştirildi.',
+      enjoy3Days: '5 gün boyunca sınırsız rüya analizi ve içgörülerin tadını çıkarın!',
       alreadyUsed: 'Deneme Zaten Kullanıldı',
       alreadyUsedDesc: 'Ücretsiz denemenizi zaten kullandınız. Submirra\'nın keyfini çıkarmaya devam etmek için ücretli bir plana yükseltin.',
       viewPlans: 'Planları Görüntüle',
       whatsIncluded: 'Neler Dahil:',
-      feature1: 'Tüm özelliklere 3 gün tam erişim',
-      feature2: 'Derin içgörülerle 3 rüya analizi',
+      feature1: 'Tüm özelliklere 5 gün tam erişim',
+      feature2: 'Derin içgörülerle 5 rüya analizi',
       feature3: 'Rüyalarınız için güzel görselleştirmeler',
       duration: 'Süre',
-      threeDays: '3 Gün',
+      threeDays: '5 Gün',
       analyses: 'Analizler',
-      threeAnalyses: '3 Rüya',
+      threeAnalyses: '5 Rüya',
       features: 'Özellikler',
       fullAccess: 'Tam Erişim',
       startAnalyzing: 'Rüya Analizine Başla',
       trialExpired: 'Deneme Süresi Doldu',
-      trialExpiredDesc: '3 günlük ücretsiz denemeniz sona erdi. Devam etmek için yükseltin.',
+      trialExpiredDesc: '5 günlük ücretsiz denemeniz sona erdi. Devam etmek için yükseltin.',
       ipAlreadyUsed: 'Bu IP adresinden daha önce ücretsiz deneme kullanılmış. Her kişi yalnızca bir kez ücretsiz deneme alabilir.',
       ipCheckFailed: 'Uygunluk kontrolü yapılamadı. Lütfen tekrar deneyin.',
     },
@@ -1372,7 +1383,7 @@ const translations: Record<Language, Translations> = {
       paymentText: 'İhtiyaçlarınıza uygun esnek abonelik planları sunuyoruz:',
       paymentFeature1: 'Aylık abonelikler istediğiniz zaman iptal edilebilir',
       paymentFeature2: 'Aboneliğiniz yenilenmeden 7 gün önce bilgilendirileceksiniz',
-      paymentFeature3: 'Tüm özellikleri risk almadan keşfetmeniz için 3 günlük ücretsiz deneme sunuyoruz',
+      paymentFeature3: 'Tüm özellikleri risk almadan keşfetmeniz için 5 günlük ücretsiz deneme sunuyoruz',
       terminationTitle: '7. Hesap Sonlandırma',
       terminationText: 'Topluluk kurallarımızı ihlal eden veya zararlı davranışlarda bulunan hesapları askıya alabiliriz. Sorunları adil bir şekilde çözmeyi hedefliyoruz ve hesabınızda herhangi bir işlem yapılırsa sizi bilgilendireceğiz.',
       contactTitle: '8. İletişim Bilgileri',
@@ -1450,10 +1461,25 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
+  // Initialize with default language, will be updated from localStorage in useEffect
   const [language, setLanguage] = useState<Language>('en');
 
+  // Load language from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('submirra_language');
+    if (stored === 'tr' || stored === 'en') {
+      setLanguage(stored);
+    }
+  }, []);
+
+  // Save language to localStorage when it changes
+  const handleSetLanguage = (lang: Language) => {
+    setLanguage(lang);
+    localStorage.setItem('submirra_language', lang);
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t: translations[language] }}>
+    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t: translations[language] }}>
       {children}
     </LanguageContext.Provider>
   );

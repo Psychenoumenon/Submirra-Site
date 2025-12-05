@@ -14,27 +14,62 @@ interface RouterContextType {
 const RouterContext = createContext<RouterContextType | undefined>(undefined);
 
 export function RouterProvider({ children }: { children: ReactNode }) {
-  const [currentPage, setCurrentPage] = useState<Page>('/');
+  // Initialize state from URL to handle F5 refresh correctly
+  const getInitialPage = (): Page => {
+    if (typeof window === 'undefined') return '/';
+    const path = window.location.pathname;
+    
+    // Handle profile routes with user ID
+    if (path.startsWith('/profile/')) {
+      return '/profile';
+    }
+    
+    // Handle query parameters
+    const pathWithoutQuery = path.split('?')[0];
+    const basePath = pathWithoutQuery.split('/')[1];
+    
+    if (!basePath || basePath === '') {
+      return '/';
+    }
+    
+    const route = `/${basePath}` as Page;
+    if (VALID_ROUTES.includes(route)) {
+      return route;
+    }
+    
+    return '/';
+  };
+
+  const [currentPage, setCurrentPage] = useState<Page>(getInitialPage);
 
   // Sync with browser URL
   useEffect(() => {
     const syncPath = () => {
       const path = window.location.pathname;
-      const basePath = path.split('/')[1];
+      
+      // Handle profile routes with user ID
+      if (path.startsWith('/profile/')) {
+        setCurrentPage('/profile' as Page);
+        window.scrollTo(0, 0);
+        return;
+      }
+      
+      // Handle query parameters (e.g., /messages?user=...)
+      const pathWithoutQuery = path.split('?')[0];
+      const basePath = pathWithoutQuery.split('/')[1];
       
       let targetPage: Page = '/';
       
-      if (basePath === '' || basePath === undefined) {
+      if (!basePath || basePath === '') {
         targetPage = '/';
-      } else if (path.startsWith('/profile/')) {
-        targetPage = '/profile';
       } else {
         const route = `/${basePath}` as Page;
-        // Check if route is valid, otherwise default to home
+        // Check if route is valid
         if (VALID_ROUTES.includes(route)) {
           targetPage = route;
         } else {
-          // Invalid route - redirect to home but keep URL for user to see
+          // Invalid route - keep current URL but set page to home
+          // This prevents redirect on F5 refresh
           targetPage = '/';
         }
       }
@@ -45,7 +80,7 @@ export function RouterProvider({ children }: { children: ReactNode }) {
       window.scrollTo(0, 0);
     };
 
-    // Initial sync
+    // Initial sync - must happen immediately on mount
     syncPath();
 
     // Listen for browser back/forward
@@ -53,10 +88,17 @@ export function RouterProvider({ children }: { children: ReactNode }) {
       syncPath();
     };
     
+    // Also listen for hash changes (if any)
+    const handleHashChange = () => {
+      syncPath();
+    };
+    
     window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
     
     return () => {
       window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
 

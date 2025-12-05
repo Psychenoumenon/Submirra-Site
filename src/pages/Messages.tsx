@@ -35,7 +35,7 @@ interface UserProfile {
 }
 
 export default function Messages() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -66,6 +66,9 @@ export default function Messages() {
 
   useEffect(() => {
     try {
+      // Wait for auth to finish loading before checking user
+      if (authLoading) return;
+      
       if (!user) {
         navigate('/signin');
         return;

@@ -26,7 +26,7 @@ interface Dream {
 }
 
 export default function Library() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
@@ -48,6 +48,9 @@ export default function Library() {
   const touchEndX = useRef<number | null>(null);
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking user
+    if (authLoading) return;
+    
     if (!user) {
       navigate('/signin');
       return;

@@ -18,25 +18,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Normal Supabase auth
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      // Check trial expiration when session loads
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        setUser(session.user);
         checkTrialExpiration(session.user.id);
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     }).catch(() => {
       // Silent error handling
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      // Check trial expiration when auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
+        setUser(session.user);
         checkTrialExpiration(session.user.id);
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();

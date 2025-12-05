@@ -21,10 +21,10 @@ BEGIN
   -- Eğer plan_type değiştiyse veya yeni kayıt oluşturuluyorsa, diğer alanları otomatik güncelle
   IF (TG_OP = 'INSERT') OR (NEW.plan_type IS DISTINCT FROM COALESCE(OLD.plan_type, '')) THEN
     NEW.daily_analysis_limit := CASE 
-      WHEN NEW.plan_type = 'trial' THEN 3  -- Trial için toplam 3 (trial_analyses_used ile kontrol)
+      WHEN NEW.plan_type = 'trial' THEN 5  -- Trial için toplam 5 (trial_analyses_used ile kontrol)
       WHEN NEW.plan_type = 'standard' THEN 3  -- Standard günlük 3
       WHEN NEW.plan_type = 'premium' THEN 5  -- Premium günlük 5
-      ELSE COALESCE(NEW.daily_analysis_limit, 3)
+      ELSE COALESCE(NEW.daily_analysis_limit, 5)
     END;
     
     NEW.visualizations_per_analysis := CASE 

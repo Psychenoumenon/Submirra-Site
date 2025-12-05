@@ -2,7 +2,7 @@
   # Daily Analysis Limit Functions
   
   This migration adds functions to check and increment daily analysis limits
-  for standard and premium users. Trial users use trial_analyses_used (total 3).
+  for standard and premium users. Trial users use trial_analyses_used (total 5).
   
   - Standard users: 3 analyses per day
   - Premium users: 5 analyses per day
@@ -28,7 +28,7 @@ BEGIN
   -- If no subscription found, default to trial
   IF v_plan_type IS NULL THEN
     v_plan_type := 'trial';
-    v_daily_limit := 3;
+    v_daily_limit := 5;
   END IF;
   
   -- Trial users don't use daily limits, they use trial_analyses_used
@@ -38,9 +38,9 @@ BEGIN
     WHERE user_id = p_user_id;
     
     RETURN jsonb_build_object(
-      'can_analyze', v_trial_analyses_used < 3,
+      'can_analyze', v_trial_analyses_used < 5,
       'used', v_trial_analyses_used,
-      'limit', 3,
+      'limit', 5,
       'is_trial', true
     );
   END IF;

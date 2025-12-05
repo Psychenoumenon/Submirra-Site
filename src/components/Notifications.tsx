@@ -395,6 +395,8 @@ export default function Notifications() {
                 <button
                   onClick={() => setIsOpen(false)}
                   className="text-slate-400 hover:text-white transition-colors"
+                  title={t.notifications.close}
+                  aria-label={t.notifications.close}
                 >
                   <X size={18} />
                 </button>

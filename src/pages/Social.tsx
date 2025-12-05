@@ -130,10 +130,14 @@ export default function Social() {
   };
 
   useEffect(() => {
-    loadPublicDreams();
-    if (user) {
-      loadFollowingUsers();
-    }
+    // Load following users first if needed, then load dreams
+    const loadData = async () => {
+      if (user && filterBy === 'following') {
+        await loadFollowingUsers();
+      }
+      await loadPublicDreams();
+    };
+    loadData();
   }, [user, sortBy, filterBy, searchQuery]);
 
 
@@ -168,7 +172,10 @@ export default function Social() {
   }, [selectedDream]);
 
   const loadFollowingUsers = async () => {
-    if (!user) return;
+    if (!user) {
+      setFollowingUsers(new Set());
+      return;
+    }
     
     try {
       const { data, error } = await supabase
@@ -181,19 +188,37 @@ export default function Social() {
       setFollowingUsers(new Set((data || []).map(f => f.following_id)));
     } catch (error) {
       console.error('Error loading following users:', error);
+      setFollowingUsers(new Set()); // Set empty set on error
     }
   };
 
   const loadPublicDreams = async () => {
     try {
       setLoading(true);
-      setDreams([]);
+      // Don't clear dreams immediately - show loading overlay instead
+      if (dreams.length === 0) {
+        setDreams([]);
+      }
 
-      // Build query - Load all dreams without pagination
+      // Build query - Load dreams with limit for better performance
       let query = supabase
         .from('dreams')
         .select(`
-          *,
+          id,
+          dream_text,
+          dream_text_tr,
+          dream_text_en,
+          analysis_text,
+          analysis_text_tr,
+          analysis_text_en,
+          image_url,
+          image_url_2,
+          image_url_3,
+          primary_image_index,
+          created_at,
+          user_id,
+          status,
+          is_public,
           profiles:user_id (
             full_name,
             avatar_url,
@@ -204,7 +229,9 @@ export default function Social() {
           )
         `)
         .eq('is_public', true)
-        .in('status', ['completed', 'pending', 'processing']); // Show all public dreams (completed, pending, and processing)
+        .in('status', ['completed', 'pending', 'processing'])
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit to 50 dreams initially for faster loading
 
       // Apply filter
       if (filterBy === 'following' && user) {
@@ -222,16 +249,11 @@ export default function Social() {
         query = query.or(`dream_text.ilike.%${searchQuery}%,analysis_text.ilike.%${searchQuery}%`);
       }
 
-      // Apply sorting
-      if (sortBy === 'recent') {
-        query = query.order('created_at', { ascending: false });
-      } else if (sortBy === 'popular') {
-        // For popular, we'll need to join with likes count
-        // For now, order by created_at and we'll sort client-side
-        query = query.order('created_at', { ascending: false });
-      } else if (sortBy === 'trending') {
-        // Trending: recent dreams with high engagement
-        query = query.order('created_at', { ascending: false });
+      // Apply sorting (already ordered by created_at, will sort client-side for popular/trending)
+      // Note: order is already applied above, but we can override if needed
+      if (sortBy !== 'recent') {
+        // For popular and trending, we'll sort client-side after getting likes/comments
+        // Keep the query order as created_at for now
       }
 
       let { data: dreamsData, error: dreamsError } = await query;
@@ -244,14 +266,30 @@ export default function Social() {
           let retryQuery = supabase
             .from('dreams')
             .select(`
-              *,
+              id,
+              dream_text,
+              dream_text_tr,
+              dream_text_en,
+              analysis_text,
+              analysis_text_tr,
+              analysis_text_en,
+              image_url,
+              image_url_2,
+              image_url_3,
+              primary_image_index,
+              created_at,
+              user_id,
+              status,
+              is_public,
               profiles:user_id (
                 full_name,
                 avatar_url,
                 username
               )
             `)
-            .in('status', ['completed', 'pending', 'processing']); // Show all public dreams (completed, pending, and processing)
+            .in('status', ['completed', 'pending', 'processing'])
+            .order('created_at', { ascending: false })
+            .limit(50);
           
           // Apply filter
           if (filterBy === 'following' && user) {
@@ -269,16 +307,7 @@ export default function Social() {
             retryQuery = retryQuery.or(`dream_text.ilike.%${searchQuery}%,analysis_text.ilike.%${searchQuery}%`);
           }
 
-          // Apply sorting
-          if (sortBy === 'recent') {
-            retryQuery = retryQuery.order('created_at', { ascending: false });
-          } else if (sortBy === 'popular') {
-            retryQuery = retryQuery.order('created_at', { ascending: false });
-          } else if (sortBy === 'trending') {
-            retryQuery = retryQuery.order('created_at', { ascending: false });
-          }
-
-          // No pagination - load all dreams
+          // Sorting already applied above
           
           const { data, error: retryError } = await retryQuery;
           
@@ -311,26 +340,27 @@ export default function Social() {
       let commentsData: any[] | null = null;
 
       if (dreamIds.length > 0) {
-        // Try to get likes, but handle if table doesn't exist
-        try {
-          const { data: likes } = await supabase
+        // Load likes and comments in parallel for better performance
+        const [likesResult, commentsResult] = await Promise.allSettled([
+          supabase
             .from('dream_likes')
             .select('dream_id, user_id')
-            .in('dream_id', dreamIds);
-          likesData = likes;
-        } catch (e) {
-          // Table might not exist yet
+            .in('dream_id', dreamIds),
+          supabase
+            .from('dream_comments')
+            .select('dream_id')
+            .in('dream_id', dreamIds)
+        ]);
+
+        if (likesResult.status === 'fulfilled' && !likesResult.value.error) {
+          likesData = likesResult.value.data || [];
+        } else {
           likesData = [];
         }
 
-        try {
-          const { data: comments } = await supabase
-            .from('dream_comments')
-            .select('dream_id')
-            .in('dream_id', dreamIds);
-          commentsData = comments;
-        } catch (e) {
-          // Table might not exist yet
+        if (commentsResult.status === 'fulfilled' && !commentsResult.value.error) {
+          commentsData = commentsResult.value.data || [];
+        } else {
           commentsData = [];
         }
 
@@ -383,9 +413,10 @@ export default function Social() {
           dreamsWithStats.sort((a, b) => {
             const aDate = new Date(a.created_at).getTime();
             const bDate = new Date(b.created_at).getTime();
-            const daysDiff = (Date.now() - aDate) / (1000 * 60 * 60 * 24);
-            const aScore = (a.likes_count * 2 + a.comments_count) / (daysDiff + 1);
-            const bScore = (b.likes_count * 2 + b.comments_count) / (daysDiff + 1);
+            const aDaysDiff = (Date.now() - aDate) / (1000 * 60 * 60 * 24);
+            const bDaysDiff = (Date.now() - bDate) / (1000 * 60 * 60 * 24);
+            const aScore = (a.likes_count * 2 + a.comments_count) / (aDaysDiff + 1);
+            const bScore = (b.likes_count * 2 + b.comments_count) / (bDaysDiff + 1);
             return bScore - aScore;
           });
         }
@@ -543,12 +574,22 @@ export default function Social() {
         console.log('Error deleting comments:', e);
       }
 
-      // Delete the dream
-      const { error } = await supabase
+      // Check if user is developer (developers can delete any dream)
+      const { data: isDev } = await supabase.rpc('is_developer', {
+        p_user_id: user.id
+      });
+
+      // Build delete query - developers can delete any dream, others can only delete their own
+      let deleteQuery = supabase
         .from('dreams')
         .delete()
-        .eq('id', dreamId)
-        .eq('user_id', user.id); // Only allow deleting own dreams
+        .eq('id', dreamId);
+      
+      if (!isDev) {
+        deleteQuery = deleteQuery.eq('user_id', user.id); // Only allow deleting own dreams
+      }
+
+      const { error } = await deleteQuery;
 
       if (error) throw error;
 
@@ -926,7 +967,7 @@ export default function Social() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {dreams.map((dream, index) => (
+            {dreams.map((dream) => (
               <div
                 key={dream.id}
                 className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group"
@@ -1005,6 +1046,8 @@ export default function Social() {
                                 e.stopPropagation();
                                 e.preventDefault();
                               }}
+                              title={t.social.previousImage || "Previous image"}
+                              aria-label={t.social.previousImage || "Previous image"}
                             >
                               <ChevronLeft size={20} />
                             </button>
@@ -1017,6 +1060,8 @@ export default function Social() {
                                 }
                               }}
                               className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-all z-20 md:block hidden"
+                              title={t.social.nextImage}
+                              aria-label={t.social.nextImage}
                               disabled={currentIndex === images.length - 1}
                               onMouseDown={(e) => {
                                 e.stopPropagation();
@@ -1119,6 +1164,8 @@ export default function Social() {
                             ? 'text-pink-400'
                             : 'text-slate-400 hover:text-pink-400'
                         }`}
+                        title={dream.is_liked ? t.social.likes : t.social.like}
+                        aria-label={dream.is_liked ? t.social.likes : t.social.like}
                       >
                         <Heart size={24} className={dream.is_liked ? 'fill-current' : ''} />
                       </button>
@@ -1128,6 +1175,8 @@ export default function Social() {
                           openDreamModal(dream);
                         }}
                         className="text-slate-400 hover:text-purple-400 transition-all hover:scale-110"
+                        title={t.social.comments}
+                        aria-label={t.social.comments}
                       >
                         <MessageCircle size={24} />
                       </button>
@@ -1146,6 +1195,8 @@ export default function Social() {
                           }
                         }}
                         className="text-slate-400 hover:text-cyan-400 transition-all hover:scale-110"
+                        title={t.social.checkOutDream}
+                        aria-label={t.social.checkOutDream}
                       >
                         <Share2 size={24} />
                       </button>
@@ -1157,6 +1208,7 @@ export default function Social() {
                           }}
                           className="text-slate-400 hover:text-red-400 transition-all hover:scale-110 ml-auto"
                           title={t.social.deleteDream}
+                          aria-label={t.social.deleteDream}
                         >
                           <Trash2 size={20} />
                         </button>
@@ -1306,6 +1358,8 @@ export default function Social() {
                             }}
                             className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
                             disabled={modalIndex === 0}
+                            title={t.social.previousImage}
+                            aria-label={t.social.previousImage}
                           >
                             <ChevronLeft size={24} />
                           </button>
@@ -1318,6 +1372,8 @@ export default function Social() {
                             }}
                             className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
                             disabled={modalIndex === images.length - 1}
+                            title={t.social.nextImage}
+                            aria-label={t.social.nextImage}
                           >
                             <ChevronRight size={24} />
                           </button>
@@ -1463,6 +1519,8 @@ export default function Social() {
           <button
             onClick={() => setLightboxImage(null)}
             className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-2"
+            title={t.social.close}
+            aria-label={t.social.close}
           >
             <X size={24} />
           </button>
