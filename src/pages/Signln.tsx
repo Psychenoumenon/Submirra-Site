@@ -243,8 +243,8 @@ export default function SignIn() {
                       type="text"
                       value={username}
                       onChange={(e) => {
-                        // Remove @ if user types it, only allow alphanumeric and underscore
-                        const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                        // Remove @ if user types it, only allow alphanumeric and underscore (case-insensitive)
+                        const cleaned = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
                         setUsername(cleaned);
                       }}
                       className="w-full pl-8 md:pl-10 pr-3 md:pr-4 py-2.5 md:py-3 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm md:text-base"
@@ -254,7 +254,7 @@ export default function SignIn() {
                       maxLength={20}
                     />
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">Only lowercase letters, numbers, and underscores</p>
+                  <p className="text-xs text-slate-500 mt-1">Letters, numbers, and underscores only</p>
                 </div>
               </>
             )}

@@ -15,7 +15,7 @@ interface ProfileData {
   bio: string | null;
   username: string | null;
   is_developer?: boolean;
-  plan_type?: 'trial' | 'standard' | 'premium' | null;
+  plan_type?: 'free' | 'trial' | 'standard' | 'premium' | null;
 }
 
 interface UserStats {
@@ -35,6 +35,7 @@ interface PublicDream {
   analysis_text_tr?: string | null;
   analysis_text_en?: string | null;
   image_url: string;
+  analysis_type?: 'basic' | 'advanced' | 'basic_visual' | 'advanced_visual' | null;
   created_at: string;
   status: string;
   likes_count: number;
@@ -179,10 +180,10 @@ export default function Profile() {
       }
 
       const data = profileResult.value.data;
-      let planType: 'trial' | 'standard' | 'premium' | null = null;
+      let planType: 'free' | 'trial' | 'standard' | 'premium' | null = null;
       
       if (subscriptionResult.status === 'fulfilled' && subscriptionResult.value.data?.plan_type) {
-        planType = subscriptionResult.value.data.plan_type as 'trial' | 'standard' | 'premium';
+        planType = subscriptionResult.value.data.plan_type as 'free' | 'trial' | 'standard' | 'premium';
       }
 
       setProfile({
@@ -236,10 +237,10 @@ export default function Profile() {
       }
 
       const data = profileResult.value.data;
-      let planType: 'trial' | 'standard' | 'premium' | null = null;
+      let planType: 'free' | 'trial' | 'standard' | 'premium' | null = null;
       
       if (subscriptionResult.status === 'fulfilled' && subscriptionResult.value.data?.plan_type) {
-        planType = subscriptionResult.value.data.plan_type as 'trial' | 'standard' | 'premium';
+        planType = subscriptionResult.value.data.plan_type as 'free' | 'trial' | 'standard' | 'premium';
       }
 
       setProfile({
@@ -364,7 +365,7 @@ export default function Profile() {
       // Only select necessary columns for faster loading
       const { data: dreamsData, error } = await supabase
         .from('dreams')
-        .select('id, image_url, image_url_2, image_url_3, created_at, status, likes_count, dream_text, dream_text_tr, dream_text_en, analysis_text, analysis_text_tr, analysis_text_en')
+        .select('id, image_url, image_url_2, image_url_3, analysis_type, created_at, status, likes_count, dream_text, dream_text_tr, dream_text_en, analysis_text, analysis_text_tr, analysis_text_en')
         .eq('user_id', userId)
         .eq('is_public', true)
         .in('status', ['completed', 'pending'])
@@ -850,8 +851,8 @@ export default function Profile() {
         showToast('Username must be at least 3 characters', 'error');
         return;
       }
-      if (!/^[a-z0-9_]+$/.test(editedUsername.toLowerCase())) {
-        showToast('Username can only contain lowercase letters, numbers, and underscores', 'error');
+      if (!/^[a-zA-Z0-9_]+$/.test(editedUsername)) {
+        showToast('Username can only contain letters, numbers, and underscores', 'error');
         return;
       }
     }
@@ -868,11 +869,11 @@ export default function Profile() {
 
       // Update username if changed
       if (editedUsername.trim() && editedUsername.toLowerCase() !== profile?.username?.toLowerCase()) {
-        // Check if username is already taken
+        // Check if username is already taken (case-insensitive)
         const { data: existingUser, error: checkError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('username', editedUsername.toLowerCase())
+          .ilike('username', editedUsername)
           .neq('id', user.id)
           .single();
 
@@ -886,7 +887,7 @@ export default function Profile() {
           return;
         }
 
-        updateData.username = editedUsername.toLowerCase().trim();
+        updateData.username = editedUsername.trim();
       }
 
       const { error } = await supabase
@@ -1516,7 +1517,7 @@ export default function Profile() {
                     <span className="text-slate-500 text-sm">@{profile.username}</span>
                   )}
                   {!isEditing && profile?.is_developer && (
-                    <span className="px-2.5 py-1 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/40 rounded-lg text-cyan-400 text-xs font-semibold flex items-center gap-1.5">
+                    <span className="px-2.5 py-1 bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/40 rounded-lg text-red-400 text-xs font-semibold flex items-center gap-1.5">
                       <Sparkles size={12} />
                       {t.profile.developer}
                     </span>
@@ -1525,10 +1526,12 @@ export default function Profile() {
                     <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
                       profile.plan_type === 'premium'
                         ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-400'
+                        : profile.plan_type === 'free'
+                        ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 border border-slate-500/40 text-slate-300'
                         : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-400'
                     }`}>
                       <Zap size={12} />
-                      {profile.plan_type === 'premium' ? 'Premium' : 'Standard'}
+                      {profile.plan_type === 'premium' ? 'Premium' : profile.plan_type === 'free' ? 'Free Plan' : 'Standard'}
                     </span>
                   )}
                 </div>
@@ -1818,7 +1821,12 @@ export default function Profile() {
                     onClick={() => navigate(`/social`)}
                     className="group relative aspect-square bg-slate-900/50 border border-purple-500/20 rounded-xl overflow-hidden cursor-pointer hover:border-purple-500/40 transition-all"
                   >
-                    {dream.image_url ? (
+                    {(dream.analysis_type === 'basic' || dream.analysis_type === 'advanced') ? (
+                      // For basic or advanced analysis without visuals, show icon instead of image
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
+                        <BookOpen className="text-purple-400/50" size={32} />
+                      </div>
+                    ) : dream.image_url ? (
                       <img
                         src={dream.image_url}
                         alt="Dream"

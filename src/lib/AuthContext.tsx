@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           emailRedirectTo: `${window.location.origin}`,
           data: {
             full_name: fullName,
-            username: username.toLowerCase(), // Username without @ symbol
+            username: username, // Username without @ symbol (case preserved)
           },
         },
       });

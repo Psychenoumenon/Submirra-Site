@@ -1,4 +1,4 @@
-import { Brain, Sparkles, Shield } from 'lucide-react';
+import { Brain, Sparkles, Shield, Users } from 'lucide-react';
 import { useLanguage } from '../lib/i18n';
 
 export default function About() {
@@ -73,7 +73,21 @@ export default function About() {
             </div>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-5 md:p-8 hover:border-cyan-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1 animate-fade-in-delay-3">
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-green-500/20 rounded-2xl p-5 md:p-8 hover:border-green-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1 animate-fade-in-delay-3">
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center border border-green-500/30 flex-shrink-0">
+                <Users className="text-green-400" size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl md:text-2xl font-semibold text-white mb-2 md:mb-3">{t.about.socialTitle}</h2>
+                <p className="text-sm md:text-base text-slate-300 leading-relaxed">
+                  {t.about.socialDesc}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-5 md:p-8 hover:border-cyan-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1 animate-fade-in-delay-4">
             <div className="flex items-start gap-3 md:gap-4">
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center border border-cyan-500/30 flex-shrink-0">
                 <Shield className="text-cyan-400" size={20} />
@@ -88,7 +102,7 @@ export default function About() {
           </div>
 
           <div className="text-center pt-6 md:pt-8">
-            <p className="text-sm md:text-base text-slate-400 italic px-4">
+            <p className="text-sm md:text-base text-slate-400 px-4">
               {t.about.quote}
             </p>
           </div>

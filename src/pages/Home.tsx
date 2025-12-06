@@ -1,4 +1,4 @@
-import { Sparkles, Brain, Image as ImageIcon, ArrowRight, Zap, BookOpen, TrendingUp, Eye, Palette, Database } from 'lucide-react';
+import { Sparkles, Brain, Image as ImageIcon, ArrowRight, Zap, BookOpen, TrendingUp, Eye, Palette, Database, Users } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from '../components/Router';
 import { useAuth } from '../lib/AuthContext';
@@ -190,10 +190,11 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mt-12 md:mt-24 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mt-12 md:mt-24 max-w-7xl mx-auto">
             {/* Deep Analysis */}
             <div 
-              className="group bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-xl hover:shadow-pink-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2 focus-within:ring-2 focus-within:ring-pink-500/50 focus-within:ring-offset-2 focus-within:ring-offset-slate-950"
+              onClick={() => navigate('/analyze')}
+              className="group bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-xl hover:shadow-pink-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2 focus-within:ring-2 focus-within:ring-pink-500/50 focus-within:ring-offset-2 focus-within:ring-offset-slate-950 cursor-pointer"
               style={{
                 transform: `translate3d(${mousePosition.x * 0.03}px, ${mousePosition.y * 0.03}px, 0)`,
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -219,9 +220,9 @@ export default function Home() {
                 <p className="text-sm text-slate-300 leading-relaxed mb-4 group-hover:text-slate-200 transition-colors">
                   {t.home.feature1Desc}
                 </p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
                   {t.home.feature1Details.split(' • ').map((detail, index) => (
-                    <div key={index} className="px-3 py-2 bg-pink-500/20 text-pink-300 text-xs font-medium rounded-lg border border-pink-500/30 group-hover:bg-pink-500/30 group-hover:border-pink-400/50 transition-all text-center">
+                    <div key={index} className="px-3 py-2 bg-pink-500/20 text-pink-300 text-xs font-medium rounded-md border border-pink-500/30 group-hover:bg-pink-500/30 group-hover:border-pink-400/50 transition-all text-center h-[2.25rem] flex items-center justify-center">
                       {detail}
                     </div>
                   ))}
@@ -236,7 +237,8 @@ export default function Home() {
 
             {/* Visual Generation */}
             <div 
-              className="group bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-xl hover:shadow-purple-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2 focus-within:ring-2 focus-within:ring-purple-500/50 focus-within:ring-offset-2 focus-within:ring-offset-slate-950"
+              onClick={() => navigate('/analyze')}
+              className="group bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-xl hover:shadow-purple-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2 focus-within:ring-2 focus-within:ring-purple-500/50 focus-within:ring-offset-2 focus-within:ring-offset-slate-950 cursor-pointer"
               style={{
                 transform: `translate3d(${mousePosition.x * 0.03}px, ${mousePosition.y * 0.03}px, 0)`,
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -262,9 +264,9 @@ export default function Home() {
                 <p className="text-sm text-slate-300 leading-relaxed mb-6 group-hover:text-slate-200 transition-colors">
                   {t.home.feature2Desc}
                 </p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
                   {t.home.feature2Details.split(' • ').map((detail, index) => (
-                    <div key={index} className="px-3 py-2 bg-purple-500/20 text-purple-300 text-xs font-medium rounded-lg border border-purple-500/30 group-hover:bg-purple-500/30 group-hover:border-purple-400/50 transition-all text-center">
+                    <div key={index} className="px-3 py-2 bg-purple-500/20 text-purple-300 text-xs font-medium rounded-md border border-purple-500/30 group-hover:bg-purple-500/30 group-hover:border-purple-400/50 transition-all text-center h-[2.25rem] flex items-center justify-center">
                       {detail}
                     </div>
                   ))}
@@ -279,7 +281,8 @@ export default function Home() {
 
             {/* Personal Library */}
             <div 
-              className="group bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-xl hover:shadow-cyan-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2 focus-within:ring-2 focus-within:ring-cyan-500/50 focus-within:ring-offset-2 focus-within:ring-offset-slate-950"
+              onClick={() => navigate(user ? '/library' : '/signin')}
+              className="group bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-xl hover:shadow-cyan-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2 focus-within:ring-2 focus-within:ring-cyan-500/50 focus-within:ring-offset-2 focus-within:ring-offset-slate-950 cursor-pointer"
               style={{
                 transform: `translate3d(${mousePosition.x * 0.03}px, ${mousePosition.y * 0.03}px, 0)`,
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -302,12 +305,12 @@ export default function Home() {
                   <BookOpen className="w-8 h-8 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3 group-hover:text-cyan-100 transition-colors">{t.home.feature3Title}</h3>
-                <p className="text-sm text-slate-300 leading-relaxed mb-4 group-hover:text-slate-200 transition-colors">
+                <p className="text-sm text-slate-300 leading-relaxed mb-5 group-hover:text-slate-200 transition-colors">
                   {t.home.feature3Desc}
                 </p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
                   {t.home.feature3Details.split(' • ').map((detail, index) => (
-                    <div key={index} className="px-3 py-2 bg-cyan-500/20 text-cyan-300 text-xs font-medium rounded-lg border border-cyan-500/30 group-hover:bg-cyan-500/30 group-hover:border-cyan-400/50 transition-all text-center">
+                    <div key={index} className="px-3 py-2 bg-cyan-500/20 text-cyan-300 text-xs font-medium rounded-md border border-cyan-500/30 group-hover:bg-cyan-500/30 group-hover:border-cyan-400/50 transition-all text-center h-[2.25rem] flex items-center justify-center">
                       {detail}
                     </div>
                   ))}
@@ -316,6 +319,50 @@ export default function Home() {
                   <Database className="w-4 h-4 text-cyan-400" />
                   <TrendingUp className="w-4 h-4 text-cyan-400" />
                   <BookOpen className="w-4 h-4 text-cyan-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Social Community */}
+            <div 
+              onClick={() => navigate(user ? '/social' : '/signin')}
+              className="group bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-xl hover:shadow-green-500/25 transition-all duration-500 relative overflow-hidden hover:-translate-y-2 focus-within:ring-2 focus-within:ring-green-500/50 focus-within:ring-offset-2 focus-within:ring-offset-slate-950 cursor-pointer"
+              style={{
+                transform: `translate3d(${mousePosition.x * 0.03}px, ${mousePosition.y * 0.03}px, 0)`,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'transform',
+                boxShadow: '0 0 0 0.5px rgba(34, 197, 94, 0.12), inset 0 0 0 0.5px rgba(34, 197, 94, 0.06), 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 20px rgba(34, 197, 94, 0.08)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 0.5px rgba(34, 197, 94, 0.25), inset 0 0 0 0.5px rgba(34, 197, 94, 0.12), 0 4px 12px rgba(34, 197, 94, 0.15), 0 0 30px rgba(34, 197, 94, 0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 0.5px rgba(34, 197, 94, 0.12), inset 0 0 0 0.5px rgba(34, 197, 94, 0.06), 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 20px rgba(34, 197, 94, 0.08)';
+              }}
+              tabIndex={0}
+              role="article"
+              aria-label={t.home.feature4Title}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-500/30 to-green-600/20 flex items-center justify-center border-2 border-green-500/40 transition-all duration-500 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-green-500/40 group-hover:border-green-400/60">
+                  <Users className="w-8 h-8 text-green-400 group-hover:text-green-300 transition-colors" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-green-100 transition-colors">{t.home.feature4Title}</h3>
+                <p className="text-sm text-slate-300 leading-relaxed mb-4 group-hover:text-slate-200 transition-colors">
+                  {t.home.feature4Desc}
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
+                  {t.home.feature4Details.split(' • ').map((detail, index) => (
+                    <div key={index} className="px-3 py-2 bg-green-500/20 text-green-300 text-xs font-medium rounded-md border border-green-500/30 group-hover:bg-green-500/30 group-hover:border-green-400/50 transition-all text-center h-[2.25rem] flex items-center justify-center">
+                      {detail}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <Users className="w-4 h-4 text-green-400" />
+                  <Sparkles className="w-4 h-4 text-green-400" />
+                  <TrendingUp className="w-4 h-4 text-green-400" />
                 </div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight, Zap, BookOpen, Lock } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -20,6 +20,7 @@ interface PublicDream {
   image_url_2?: string | null;
   image_url_3?: string | null;
   primary_image_index?: number | null;
+  analysis_type?: 'basic' | 'advanced' | 'basic_visual' | 'advanced_visual' | null;
   created_at: string;
   user_id: string;
   status?: string;
@@ -49,6 +50,7 @@ interface Comment {
 
 type SortOption = 'recent' | 'popular' | 'trending';
 type FilterOption = 'all' | 'following';
+type AnalysisTypeFilter = 'visual' | 'text';
 
 export default function Social() {
   const { user } = useAuth();
@@ -64,6 +66,7 @@ export default function Social() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [analysisTypeFilter, setAnalysisTypeFilter] = useState<AnalysisTypeFilter>('visual');
   const [searchQuery, setSearchQuery] = useState('');
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [showUserSearch, setShowUserSearch] = useState(false);
@@ -74,13 +77,15 @@ export default function Social() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const [planType, setPlanType] = useState<'free' | 'trial' | 'standard' | 'premium' | null | undefined>(undefined);
+  const [checkingPlan, setCheckingPlan] = useState(true);
 
   // Helper function to get original images in order (without reordering)
   const getOriginalImages = (dream: PublicDream): string[] => {
     const images: string[] = [];
-    if (dream.image_url) images.push(dream.image_url);
-    if (dream.image_url_2) images.push(dream.image_url_2);
-    if (dream.image_url_3) images.push(dream.image_url_3);
+    if (dream.image_url && dream.image_url.trim() !== '') images.push(dream.image_url);
+    if (dream.image_url_2 && dream.image_url_2.trim() !== '') images.push(dream.image_url_2);
+    if (dream.image_url_3 && dream.image_url_3.trim() !== '') images.push(dream.image_url_3);
     return images;
   };
 
@@ -130,6 +135,38 @@ export default function Social() {
     touchEndX.current = null;
   };
 
+  // Check user's plan type
+  useEffect(() => {
+    const checkPlan = async () => {
+      if (!user) {
+        setCheckingPlan(false);
+        return;
+      }
+
+      try {
+        const { data: subscription, error } = await supabase
+          .from('subscriptions')
+          .select('plan_type')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error checking subscription:', error);
+          setPlanType(null);
+        } else {
+          setPlanType(subscription?.plan_type || null);
+        }
+      } catch (error) {
+        console.error('Error checking plan:', error);
+        setPlanType(null);
+      } finally {
+        setCheckingPlan(false);
+      }
+    };
+
+    checkPlan();
+  }, [user]);
+
   useEffect(() => {
     // Load following users first if needed, then load dreams
     const loadData = async () => {
@@ -139,7 +176,7 @@ export default function Social() {
       await loadPublicDreams();
     };
     loadData();
-  }, [user, sortBy, filterBy, searchQuery]);
+  }, [user, sortBy, filterBy, searchQuery, analysisTypeFilter]);
 
 
   // Prevent body scroll when modal is open
@@ -216,6 +253,7 @@ export default function Social() {
           image_url_2,
           image_url_3,
           primary_image_index,
+          analysis_type,
           created_at,
           user_id,
           status,
@@ -278,6 +316,7 @@ export default function Social() {
               image_url_2,
               image_url_3,
               primary_image_index,
+              analysis_type,
               created_at,
               user_id,
               status,
@@ -422,7 +461,23 @@ export default function Social() {
           });
         }
 
-        setDreams(dreamsWithStats);
+        // Filter by visual presence (not analysis type)
+        let filteredDreams = dreamsWithStats;
+        if (analysisTypeFilter === 'visual') {
+          // Show all analyses that have images (any type with images)
+          filteredDreams = dreamsWithStats.filter(dream => {
+            const images = getDreamImages(dream);
+            return images.length > 0;
+          });
+        } else if (analysisTypeFilter === 'text') {
+          // Show only completed analyses without images (exclude pending)
+          filteredDreams = dreamsWithStats.filter(dream => {
+            const images = getDreamImages(dream);
+            return images.length === 0 && dream.status === 'completed';
+          });
+        }
+
+        setDreams(filteredDreams);
       } else {
         setDreams([]);
       }
@@ -761,7 +816,7 @@ export default function Social() {
     loadComments(dream.id);
   };
 
-  if (loading) {
+  if (loading || checkingPlan) {
     return (
       <div className="min-h-screen relative pt-24 flex items-center justify-center">
         <Loader2 className="animate-spin text-purple-400" size={48} />
@@ -769,8 +824,15 @@ export default function Social() {
     );
   }
 
+  // Check if user is not logged in or has no plan (null means no plan)
+  const hasNoPlan = user && planType === null;
+  const isNotLoggedIn = !user;
+  const shouldBlur = hasNoPlan || isNotLoggedIn;
+
   return (
     <div className="min-h-screen relative pt-24 pb-16 px-4 md:px-6">
+      {/* Blurred background content */}
+      <div className={`${shouldBlur ? 'blur-lg pointer-events-none select-none' : ''} transition-all duration-300`}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-40 right-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-40 left-10 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl"></div>
@@ -889,6 +951,34 @@ export default function Social() {
             )}
           </div>
 
+          {/* Analysis Type Tabs */}
+          <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-lg p-1 mb-4">
+            <button
+              onClick={() => {
+                setAnalysisTypeFilter('visual');
+              }}
+              className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-all ${
+                analysisTypeFilter === 'visual'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              {t.social.visualAnalyses}
+            </button>
+            <button
+              onClick={() => {
+                setAnalysisTypeFilter('text');
+              }}
+              className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-all ${
+                analysisTypeFilter === 'text'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              {t.social.textAnalyses}
+            </button>
+          </div>
+
           {/* Filter and Sort */}
           <div className="flex flex-wrap gap-3">
             {/* Filter */}
@@ -991,9 +1081,13 @@ export default function Social() {
                 key={dream.id}
                 className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group"
               >
-                {/* Dream Image - Instagram Style with Carousel */}
-                <div 
-                  className="relative aspect-square bg-slate-950 overflow-hidden group/image cursor-pointer"
+                {/* Dream Image - Instagram Style with Carousel (for analyses with images) */}
+                {(() => {
+                  const images = getDreamImages(dream);
+                  return images.length > 0;
+                })() && (
+                  <div 
+                    className="relative aspect-square bg-slate-950 overflow-hidden group/image cursor-pointer"
                   onTouchStart={handleTouchStart}
                   onTouchMove={handleTouchMove}
                   onTouchEnd={() => {
@@ -1095,7 +1189,6 @@ export default function Social() {
                     );
                   })()}
                   
-                  
                   {/* Overlay on hover */}
                   <div 
                     className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none"
@@ -1168,6 +1261,7 @@ export default function Social() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Actions Bar - Instagram Style */}
                 <div className="p-4 bg-slate-900/50">
@@ -1244,39 +1338,99 @@ export default function Social() {
                     )}
                   </div>
 
-                  {/* Dream Text Preview */}
-                  <div 
-                    className="mb-2 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDreamModal(dream);
-                    }}
-                  >
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/profile/${dream.user_id}`);
-                        }}
-                        className="text-white font-semibold text-sm hover:text-purple-300 transition-colors"
-                      >
-                        {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
-                      </button>
-                      {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
-                          dream.subscriptions.plan_type === 'premium'
-                            ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
-                            : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
-                        }`}>
-                          <Zap size={8} />
-                          {dream.subscriptions.plan_type === 'premium' ? 'Premium' : 'Standard'}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-white/80 text-sm line-clamp-2">
-                      {getDreamText(dream, language)}
-                    </span>
-                  </div>
+                  {/* For text analyses (no images), show dream and analysis text */}
+                  {(() => {
+                    const images = getDreamImages(dream);
+                    if (images.length === 0 && dream.status === 'completed') {
+                      return (
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 flex-wrap mb-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/profile/${dream.user_id}`);
+                              }}
+                              className="text-white font-semibold text-sm hover:text-purple-300 transition-colors"
+                            >
+                              {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
+                            </button>
+                            {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
+                                dream.subscriptions.plan_type === 'premium'
+                                  ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
+                                  : dream.subscriptions.plan_type === 'free'
+                                  ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 border border-slate-500/40 text-slate-300'
+                                  : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
+                              }`}>
+                                <Zap size={8} />
+                                {dream.subscriptions.plan_type === 'premium' ? 'Premium' : dream.subscriptions.plan_type === 'free' ? 'Free Plan' : 'Standard'}
+                              </span>
+                            )}
+                            <span className="text-white/50 text-xs">{formatDate(dream.created_at)}</span>
+                          </div>
+                          <div className="mb-3">
+                            <h3 className="text-xs font-semibold text-purple-400 mb-1.5">{t.library.yourDream}</h3>
+                            <p className="text-white/80 text-sm leading-relaxed line-clamp-4">
+                              {getDreamText(dream, language)}
+                            </p>
+                          </div>
+                          {getAnalysisText(dream, language) && (
+                            <div className="mb-3">
+                              <h3 className="text-xs font-semibold text-pink-400 mb-1.5">{t.library.analysis}</h3>
+                              <p className="text-white/80 text-sm leading-relaxed line-clamp-4">
+                                {getAnalysisText(dream, language)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {/* Dream Text Preview - Only for visual analyses */}
+                  {(() => {
+                    const images = getDreamImages(dream);
+                    if (images.length > 0) {
+                      return (
+                        <div 
+                          className="mb-2 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDreamModal(dream);
+                          }}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/profile/${dream.user_id}`);
+                              }}
+                              className="text-white font-semibold text-sm hover:text-purple-300 transition-colors"
+                            >
+                              {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
+                            </button>
+                            {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
+                                dream.subscriptions.plan_type === 'premium'
+                                  ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
+                                  : dream.subscriptions.plan_type === 'free'
+                                  ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 border border-slate-500/40 text-slate-300'
+                                  : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
+                              }`}>
+                                <Zap size={8} />
+                                {dream.subscriptions.plan_type === 'premium' ? 'Premium' : dream.subscriptions.plan_type === 'free' ? 'Free Plan' : 'Standard'}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-white/80 text-sm line-clamp-2">
+                            {getDreamText(dream, language)}
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                   {/* View Comments */}
                   {dream.comments_count > 0 && (
@@ -1340,86 +1494,94 @@ export default function Social() {
               </div>
             </div>
 
-            {/* Horizontal Layout: Image Left, Content Right */}
-            <div className="flex flex-1 overflow-hidden">
-              {/* Dream Image - Left Side */}
-              <div className="w-1/2 flex-shrink-0 bg-slate-950 overflow-hidden relative">
-                {(() => {
-                  const images = getDreamImages(selectedDream);
-                  if (images.length === 0) {
+            {/* Layout: Image Left (if has images), Content Right */}
+            <div className={`flex flex-1 overflow-hidden ${(() => {
+              const images = getDreamImages(selectedDream);
+              return images.length === 0 ? '' : '';
+            })()}`}>
+              {/* Dream Image - Left Side (only for analyses with images) */}
+              {(() => {
+                const images = getDreamImages(selectedDream);
+                return images.length > 0;
+              })() && (
+                <div className="w-1/2 flex-shrink-0 bg-slate-950 overflow-hidden relative">
+                  {(() => {
+                    const images = getDreamImages(selectedDream);
+                    if (images.length === 0) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
+                          <Sparkles className="text-purple-400/50" size={64} />
+                        </div>
+                      );
+                    }
+                    
+                    const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
+                    const currentImage = images[modalIndex];
+                    
                     return (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
-                        <Sparkles className="text-purple-400/50" size={64} />
+                      <div className="w-full h-full flex items-center justify-center relative">
+                        <img
+                          src={currentImage}
+                          alt="Dream visualization"
+                          className="max-w-full max-h-full object-contain cursor-zoom-in"
+                          onClick={() => setLightboxImage(currentImage)}
+                        />
+                        
+                        {/* Carousel indicators for modal */}
+                        {images.length > 1 && (
+                          <>
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+                              {images.map((_, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`h-2 rounded-full transition-all ${
+                                    idx === modalIndex
+                                      ? 'bg-white w-8'
+                                      : 'bg-white/50 w-2'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            
+                            {/* Navigation arrows for modal */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (modalIndex > 0) {
+                                  setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex - 1 });
+                                }
+                              }}
+                              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
+                              disabled={modalIndex === 0}
+                              title={t.social.previousImage}
+                              aria-label={t.social.previousImage}
+                            >
+                              <ChevronLeft size={24} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (modalIndex < images.length - 1) {
+                                  setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex + 1 });
+                                }
+                              }}
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
+                              disabled={modalIndex === images.length - 1}
+                              title={t.social.nextImage}
+                              aria-label={t.social.nextImage}
+                            >
+                              <ChevronRight size={24} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     );
-                  }
-                  
-                  const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
-                  const currentImage = images[modalIndex];
-                  
-                  return (
-                    <div className="w-full h-full flex items-center justify-center relative">
-                      <img
-                        src={currentImage}
-                        alt="Dream visualization"
-                        className="max-w-full max-h-full object-contain cursor-zoom-in"
-                        onClick={() => setLightboxImage(currentImage)}
-                      />
-                      
-                      {/* Carousel indicators for modal */}
-                      {images.length > 1 && (
-                        <>
-                          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-                            {images.map((_, idx) => (
-                              <div
-                                key={idx}
-                                className={`h-2 rounded-full transition-all ${
-                                  idx === modalIndex
-                                    ? 'bg-white w-8'
-                                    : 'bg-white/50 w-2'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          
-                          {/* Navigation arrows for modal */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (modalIndex > 0) {
-                                setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex - 1 });
-                              }
-                            }}
-                            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
-                            disabled={modalIndex === 0}
-                            title={t.social.previousImage}
-                            aria-label={t.social.previousImage}
-                          >
-                            <ChevronLeft size={24} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (modalIndex < images.length - 1) {
-                                setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex + 1 });
-                              }
-                            }}
-                            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-opacity"
-                            disabled={modalIndex === images.length - 1}
-                            title={t.social.nextImage}
-                            aria-label={t.social.nextImage}
-                          >
-                            <ChevronRight size={24} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
+                  })()}
+                </div>
+              )}
 
-              {/* Content Right Side */}
-              <div className="flex-1 flex flex-col overflow-y-auto">
+              {/* Content Right Side (or Full Width for basic analysis) */}
+              <div className={`flex flex-col overflow-y-auto ${(selectedDream.analysis_type === 'basic' || selectedDream.analysis_type === 'advanced') ? 'w-full' : 'flex-1'}`}>
                 <div className="p-6">
                   {/* Dream Text */}
                   <div className="mb-6">
@@ -1543,6 +1705,7 @@ export default function Social() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Lightbox Modal */}
       {lightboxImage && (
@@ -1564,6 +1727,50 @@ export default function Social() {
             className="max-w-full max-h-[90vh] object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* No Plan or Not Logged In Overlay */}
+      {(hasNoPlan || isNotLoggedIn) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-slate-900 border-2 border-purple-500/50 rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div className="mb-6">
+              <Lock className="mx-auto text-purple-400 mb-4" size={48} />
+              <h2 className="text-2xl font-bold text-white mb-2">
+                {isNotLoggedIn 
+                  ? (language === 'tr' ? 'Giriş Gerekli' : 'Login Required')
+                  : (language === 'tr' ? 'Plan Gerekli' : 'Plan Required')
+                }
+              </h2>
+              <p className="text-slate-400">
+                {isNotLoggedIn
+                  ? (language === 'tr' 
+                      ? 'Sosyal sayfasına erişim için önce kaydolmanız veya giriş yapmanız gerekmektedir.'
+                      : 'You must sign up or log in first to access the social page.')
+                  : (language === 'tr' 
+                      ? 'Sosyal sayfasına erişim için en azından bedava plana sahip olmalısınız.'
+                      : 'You must have at least a free plan to access the social page.')
+                }
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              {isNotLoggedIn ? (
+                <button
+                  onClick={() => navigate('/signin')}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+                >
+                  {language === 'tr' ? 'Kaydol / Giriş Yap' : 'Sign Up / Log In'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+                >
+                  {language === 'tr' ? 'Satın Al Sayfasına Git' : 'Go to Pricing Page'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

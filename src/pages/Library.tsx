@@ -20,6 +20,7 @@ interface Dream {
   image_url_2?: string | null;
   image_url_3?: string | null;
   primary_image_index?: number | null;
+  analysis_type?: 'basic' | 'advanced' | 'basic_visual' | 'advanced_visual' | null;
   created_at: string;
   status: string;
   is_favorite?: boolean;
@@ -36,6 +37,7 @@ export default function Library() {
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'pending' | 'favorites'>('all');
+  const [analysisTypeFilter, setAnalysisTypeFilter] = useState<'visual' | 'text'>('visual');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
@@ -45,6 +47,7 @@ export default function Library() {
     private: 0,
   });
   const [isPremium, setIsPremium] = useState(false);
+  const [planType, setPlanType] = useState<'free' | 'trial' | 'standard' | 'premium' | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -57,13 +60,20 @@ export default function Library() {
       return;
     }
 
+    // Check URL for tab parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'text' || tabParam === 'visual') {
+      setAnalysisTypeFilter(tabParam);
+    }
+
     // Load favorites from localStorage
     const savedFavorites = localStorage.getItem(`favorites_${user.id}`);
     if (savedFavorites) {
       setFavorites(new Set(JSON.parse(savedFavorites)));
     }
 
-    // Check if user is premium
+    // Check if user is premium and get plan type
     const checkPremium = async () => {
       const { data: subscription } = await supabase
         .from('subscriptions')
@@ -71,7 +81,9 @@ export default function Library() {
         .eq('user_id', user.id)
         .single();
       
-      setIsPremium(subscription?.plan_type === 'premium');
+      const userPlanType = subscription?.plan_type as 'free' | 'trial' | 'standard' | 'premium' | null;
+      setPlanType(userPlanType);
+      setIsPremium(userPlanType === 'premium');
     };
     
     checkPremium();
@@ -168,6 +180,23 @@ export default function Library() {
         public: publicCount,
         private: privateCount,
       });
+
+      // Auto-switch to 'text' tab if no visual dreams exist and currently on 'visual' tab
+      // Only if URL doesn't have a tab parameter (to respect user's navigation)
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (!tabParam && analysisTypeFilter === 'visual') {
+        const hasVisualDreams = dreamsWithFavorites.some(dream => {
+          const images: string[] = [];
+          if (dream.image_url && dream.image_url.trim() !== '') images.push(dream.image_url);
+          if (dream.image_url_2 && dream.image_url_2.trim() !== '') images.push(dream.image_url_2);
+          if (dream.image_url_3 && dream.image_url_3.trim() !== '') images.push(dream.image_url_3);
+          return images.length > 0;
+        });
+        if (!hasVisualDreams && dreamsWithFavorites.length > 0) {
+          setAnalysisTypeFilter('text');
+        }
+      }
     } catch (error) {
       console.error('Error loading dreams:', error);
     } finally {
@@ -354,9 +383,9 @@ export default function Library() {
   // Helper function to get original images in order (without reordering)
   const getOriginalImages = (dream: Dream): string[] => {
     const images: string[] = [];
-    if (dream.image_url) images.push(dream.image_url);
-    if (dream.image_url_2) images.push(dream.image_url_2);
-    if (dream.image_url_3) images.push(dream.image_url_3);
+    if (dream.image_url && dream.image_url.trim() !== '') images.push(dream.image_url);
+    if (dream.image_url_2 && dream.image_url_2.trim() !== '') images.push(dream.image_url_2);
+    if (dream.image_url_3 && dream.image_url_3.trim() !== '') images.push(dream.image_url_3);
     return images;
   };
 
@@ -464,7 +493,17 @@ export default function Library() {
       (filterStatus === 'pending' && dream.status === 'pending') ||
       (filterStatus === 'favorites' && dream.is_favorite);
 
-    return matchesSearch && matchesFilter;
+    // Filter by visual presence (not analysis type)
+    // Pending rüyalar sadece görselli analiz sekmesinde gösterilmeli
+    const images = getDreamImages(dream);
+    const isPending = dream.status === 'pending' || dream.status === 'processing';
+    const matchesAnalysisType = isPending 
+      ? analysisTypeFilter === 'visual' // Pending rüyalar sadece görselli analiz sekmesinde gösterilir
+      : analysisTypeFilter === 'visual' 
+        ? images.length > 0 // Show all with images (any type)
+        : images.length === 0; // Show all without images (any type)
+
+    return matchesSearch && matchesFilter && matchesAnalysisType;
   });
 
   if (!user) return null;
@@ -497,15 +536,21 @@ export default function Library() {
           <div className="flex justify-center gap-3 mb-6">
             <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-lg px-4 py-2">
               <div className="text-lg font-semibold text-white">{stats.total}</div>
-              <div className="text-xs text-slate-400">Total Dreams</div>
+              <div className="text-xs text-slate-400">{t.library.totalDreams}</div>
             </div>
             <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-lg px-4 py-2">
               <div className="text-lg font-semibold text-white">{stats.public}</div>
-              <div className="text-xs text-slate-400">Public Dreams</div>
+              <div className="text-xs text-slate-400">{t.library.publicDreams}</div>
             </div>
             <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-lg px-4 py-2">
               <div className="text-lg font-semibold text-white">{stats.private}</div>
-              <div className="text-xs text-slate-400">Private Dreams</div>
+              <div className="text-xs text-slate-400">{t.library.privateDreams}</div>
+            </div>
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-yellow-500/20 rounded-lg px-4 py-2">
+              <div className="text-lg font-semibold text-white">
+                {planType === 'free' ? 30 : planType === 'standard' ? 60 : planType === 'premium' ? 90 : '-'}
+              </div>
+              <div className="text-xs text-slate-400">{t.library.maxDreamLimit}</div>
             </div>
           </div>
 
@@ -521,6 +566,35 @@ export default function Library() {
                 className="w-full pl-10 pr-4 py-3 bg-slate-900/50 backdrop-blur-sm border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-lg"
               />
             </div>
+
+            {/* Analysis Type Tabs */}
+            <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-lg p-1">
+              <button
+                onClick={() => {
+                  setAnalysisTypeFilter('visual');
+                }}
+                className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-all ${
+                  analysisTypeFilter === 'visual'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                {t.social.visualAnalyses}
+              </button>
+              <button
+                onClick={() => {
+                  setAnalysisTypeFilter('text');
+                }}
+                className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-all ${
+                  analysisTypeFilter === 'text'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                {t.social.textAnalyses}
+              </button>
+            </div>
+
             <div className="flex gap-2 justify-center flex-wrap">
               <button
                 onClick={() => setFilterStatus('all')}
@@ -530,7 +604,7 @@ export default function Library() {
                     : 'bg-slate-800/50 text-slate-400 hover:text-slate-300'
                 }`}
               >
-                All
+                {t.library.all}
               </button>
               <button
                 onClick={() => setFilterStatus('favorites')}
@@ -541,7 +615,7 @@ export default function Library() {
                 }`}
               >
                 <Heart size={14} className={filterStatus === 'favorites' ? 'fill-current' : ''} />
-                Favorites
+                {t.library.favorites}
               </button>
               <button
                 onClick={() => setFilterStatus('completed')}
@@ -551,7 +625,7 @@ export default function Library() {
                     : 'bg-slate-800/50 text-slate-400 hover:text-slate-300'
                 }`}
               >
-                Completed
+                {t.library.completed}
               </button>
               <button
                 onClick={() => setFilterStatus('pending')}
@@ -561,7 +635,7 @@ export default function Library() {
                     : 'bg-slate-800/50 text-slate-400 hover:text-slate-300'
                 }`}
               >
-                Pending
+                {t.library.pending}
               </button>
             </div>
           </div>
@@ -588,26 +662,31 @@ export default function Library() {
             {filteredDreams.map((dream) => (
               <div
                 key={dream.id}
-                className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-xl p-6 hover:border-purple-500/40 transition-all duration-300 relative group overflow-hidden"
+                className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-xl p-6 hover:border-purple-500/40 transition-all duration-300 relative group overflow-hidden min-h-[400px]"
               >
-                {/* Pending/Processing durumunda sadece büyük loading ikonu göster */}
-                {(dream.status === 'pending' || dream.status === 'processing') ? (
-                  <div className="absolute inset-0 flex items-center justify-center z-20 bg-slate-900/80 backdrop-blur-sm rounded-xl">
-                    <div className="relative w-full h-full min-h-[300px] flex items-center justify-center p-8">
-                      <div className="relative w-full max-w-[200px] h-full max-h-[200px] flex items-center justify-center">
-                        {/* Outer glow rings */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/40 via-pink-500/40 to-blue-500/40 rounded-full blur-2xl animate-pulse scale-150"></div>
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/30 via-pink-400/30 to-blue-400/30 rounded-full blur-xl animate-pulse scale-125" style={{ animationDelay: '0.5s' }}></div>
-                        
-                        {/* Main icon container - Box with padding */}
-                        <div className="relative w-full h-full min-w-[160px] min-h-[160px] flex items-center justify-center p-8 bg-gradient-to-br from-purple-500/30 via-pink-500/30 to-blue-500/30 rounded-2xl backdrop-blur-md shadow-2xl border-2 border-purple-400/50">
-                          <div className="absolute inset-0 bg-gradient-to-br from-purple-400/25 via-pink-400/25 to-blue-400/25 rounded-2xl animate-spin" style={{ animationDuration: '4s' }}></div>
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/15 via-purple-400/15 to-pink-400/15 rounded-2xl animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }}></div>
-                          <Loader2 size={80} className="relative z-10 animate-spin text-purple-200" strokeWidth={3.5} style={{ 
-                            filter: 'drop-shadow(0 0 16px rgba(196, 181, 253, 0.9)) drop-shadow(0 0 32px rgba(236, 72, 153, 0.7)) drop-shadow(0 0 48px rgba(96, 165, 250, 0.5))',
-                            animationDuration: '1.2s'
-                          }} />
-                        </div>
+                {/* Pending/Processing durumunda loading ikonu göster - Basic analizler için gösterilmez */}
+                {(dream.status === 'pending' || dream.status === 'processing') && (dream.analysis_type !== 'basic' || dream.analysis_type === null) ? (
+                  <div className="absolute inset-0 flex items-center justify-center z-50 bg-slate-900/95 backdrop-blur-md rounded-xl h-full">
+                    <div className="relative flex flex-col items-center justify-center gap-4 p-8">
+                      {/* Glow effect */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-48 h-48 bg-gradient-to-br from-purple-500/70 via-pink-500/70 to-purple-500/70 rounded-full blur-3xl animate-pulse"></div>
+                      </div>
+                      
+                      {/* Main loading icon */}
+                      <div className="relative w-32 h-32 flex items-center justify-center">
+                        <Loader2 
+                          size={80} 
+                          className="animate-spin text-purple-400 relative z-10" 
+                          strokeWidth={3.5}
+                          style={{ 
+                            filter: 'drop-shadow(0 0 20px rgba(196, 181, 253, 0.9)) drop-shadow(0 0 40px rgba(236, 72, 153, 0.7))',
+                            animationDuration: '1s'
+                          }} 
+                        />
+                        {/* Outer rotating ring */}
+                        <div className="absolute inset-0 -m-6 border-4 border-transparent border-t-purple-400/60 border-r-pink-400/60 rounded-full animate-spin" style={{ animationDuration: '1.5s' }}></div>
+                        <div className="absolute inset-0 -m-8 border-4 border-transparent border-b-purple-400/40 border-l-pink-400/40 rounded-full animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }}></div>
                       </div>
                     </div>
                   </div>
@@ -618,7 +697,11 @@ export default function Library() {
                       onClick={() => setSelectedDream(dream)}
                       className="cursor-pointer relative z-10"
                     >
+                      {/* Show images for analyses with images */}
                       {(() => {
+                        const images = getDreamImages(dream);
+                        return images.length > 0;
+                      })() && (() => {
                         const images = getDreamImages(dream);
                         if (images.length === 0) return null;
                         
@@ -712,13 +795,43 @@ export default function Library() {
                         );
                       })()}
                       
+                      {/* For text analyses (no images), show dream and analysis text */}
+                      {(() => {
+                        const images = getDreamImages(dream);
+                        if (images.length === 0 && dream.status === 'completed') {
+                          return (
+                            <>
+                              <div className="flex items-center gap-2 text-slate-500 text-sm mb-3">
+                                <Calendar size={14} />
+                                {formatDate(dream.created_at)}
+                              </div>
+                              <div className="mb-4">
+                                <h3 className="text-sm font-semibold text-purple-400 mb-2">{t.library.yourDream}</h3>
+                                <p className="text-slate-300 text-sm leading-relaxed line-clamp-4 group-hover:text-slate-200 transition-colors">
+                                  {getDreamText(dream, language)}
+                                </p>
+                              </div>
+                              {getAnalysisText(dream, language) && (
+                                <div className="mb-4">
+                                  <h3 className="text-sm font-semibold text-pink-400 mb-2">{t.library.analysis}</h3>
+                                  <p className="text-slate-300 text-sm leading-relaxed line-clamp-4 group-hover:text-slate-200 transition-colors">
+                                    {getAnalysisText(dream, language)}
+                                  </p>
+                                </div>
+                              )}
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
+                      
                       {/* Butonlar görselin altında, kompakt - sadece completed durumunda göster */}
                       {dream.status === 'completed' && (
                         <div className="flex gap-1.5 mt-4 mb-4 justify-end flex-wrap">
-                          {/* Primary Image Button - Only for premium users with multiple images */}
+                          {/* Primary Image Button - Only for premium users with images */}
                           {(() => {
                             const images = getDreamImages(dream);
-                            if (isPremium && images.length > 1) {
+                            if (isPremium && images.length > 0) {
                               const originalImages = getOriginalImages(dream);
                               const currentIndex = carouselIndices[dream.id] || 0;
                               const currentImage = images[currentIndex];
@@ -797,13 +910,24 @@ export default function Library() {
                         </div>
                       )}
                       
-                      <div className="flex items-center gap-2 text-slate-500 text-sm mb-2">
-                        <Calendar size={14} />
-                        {formatDate(dream.created_at)}
-                      </div>
-                      <p className="text-slate-300 line-clamp-3 group-hover:text-slate-200 transition-colors">
-                        {getDreamText(dream, language)}
-                      </p>
+                      {/* For visual analyses, show date and dream text preview */}
+                      {(() => {
+                        const images = getDreamImages(dream);
+                        if (images.length > 0) {
+                          return (
+                            <>
+                              <div className="flex items-center gap-2 text-slate-500 text-sm mb-2">
+                                <Calendar size={14} />
+                                {formatDate(dream.created_at)}
+                              </div>
+                              <p className="text-slate-300 line-clamp-3 group-hover:text-slate-200 transition-colors">
+                                {getDreamText(dream, language)}
+                              </p>
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 )}
@@ -839,93 +963,101 @@ export default function Library() {
               </button>
             </div>
 
-            {/* Horizontal Layout: Image Left, Content Right */}
-            <div className="flex flex-1 overflow-hidden">
-              {/* Dream Image - Left Side */}
-              <div className="w-1/2 flex-shrink-0 bg-slate-950 overflow-hidden relative">
-                {(() => {
-                  const images = getDreamImages(selectedDream);
-                  if (images.length === 0) {
+            {/* Layout: Image Left (if has images), Content Right */}
+            <div className={`flex flex-1 overflow-hidden ${(() => {
+              const images = getDreamImages(selectedDream);
+              return images.length === 0 ? '' : '';
+            })()}`}>
+              {/* Dream Image - Left Side (only for analyses with images) */}
+              {(() => {
+                const images = getDreamImages(selectedDream);
+                return images.length > 0;
+              })() && (
+                <div className="w-1/2 flex-shrink-0 bg-slate-950 overflow-hidden relative">
+                  {(() => {
+                    const images = getDreamImages(selectedDream);
+                    if (images.length === 0) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
+                          <BookOpen className="text-purple-400/50" size={64} />
+                        </div>
+                      );
+                    }
+                    
+                    const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
+                    const currentImage = images[modalIndex];
+                    
+                    // Calculate original image index for modal
+                    const originalImages = getOriginalImages(selectedDream);
+                    const currentImageUrl = currentImage;
+                    let originalImageIndex = originalImages.findIndex(img => img === currentImageUrl);
+                    if (originalImageIndex === -1) originalImageIndex = 0;
+                    
+                    // Check if current image is primary
+                    const isPrimary = selectedDream.primary_image_index === originalImageIndex;
+                    
                     return (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-pink-900/20">
-                        <BookOpen className="text-purple-400/50" size={64} />
+                      <div className="w-full h-full flex items-center justify-center relative">
+                        <img
+                          src={currentImage}
+                          alt="Dream visualization"
+                          className="max-w-full max-h-full object-contain cursor-zoom-in"
+                          onClick={() => setLightboxImage(currentImage)}
+                        />
+                        
+                        {images.length > 1 && (
+                          <>
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+                              {images.map((_, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: idx });
+                                  }}
+                                  className={`h-2 rounded-full transition-all ${
+                                    idx === modalIndex
+                                      ? 'bg-white w-8'
+                                      : 'bg-white/50 w-2 hover:bg-white/75'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (modalIndex > 0) {
+                                  setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex - 1 });
+                                }
+                              }}
+                              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={modalIndex === 0}
+                            >
+                              <ChevronLeft size={24} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (modalIndex < images.length - 1) {
+                                  setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex + 1 });
+                                }
+                              }}
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={modalIndex === images.length - 1}
+                            >
+                              <ChevronRight size={24} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     );
-                  }
-                  
-                  const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
-                  const currentImage = images[modalIndex];
-                  
-                  // Calculate original image index for modal
-                  const originalImages = getOriginalImages(selectedDream);
-                  const currentImageUrl = currentImage;
-                  let originalImageIndex = originalImages.findIndex(img => img === currentImageUrl);
-                  if (originalImageIndex === -1) originalImageIndex = 0;
-                  
-                  // Check if current image is primary
-                  const isPrimary = selectedDream.primary_image_index === originalImageIndex;
-                  
-                  return (
-                    <div className="w-full h-full flex items-center justify-center relative">
-                      <img
-                        src={currentImage}
-                        alt="Dream visualization"
-                        className="max-w-full max-h-full object-contain cursor-zoom-in"
-                        onClick={() => setLightboxImage(currentImage)}
-                      />
-                      
-                      {images.length > 1 && (
-                        <>
-                          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-                            {images.map((_, idx) => (
-                              <button
-                                key={idx}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: idx });
-                                }}
-                                className={`h-2 rounded-full transition-all ${
-                                  idx === modalIndex
-                                    ? 'bg-white w-8'
-                                    : 'bg-white/50 w-2 hover:bg-white/75'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (modalIndex > 0) {
-                                setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex - 1 });
-                              }
-                            }}
-                            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={modalIndex === 0}
-                          >
-                            <ChevronLeft size={24} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (modalIndex < images.length - 1) {
-                                setCarouselIndices({ ...carouselIndices, [`modal-${selectedDream.id}`]: modalIndex + 1 });
-                              }
-                            }}
-                            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={modalIndex === images.length - 1}
-                          >
-                            <ChevronRight size={24} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
+                  })()}
+                </div>
+              )}
 
-              {/* Content Right Side */}
-              <div className="flex-1 flex flex-col overflow-y-auto">
+              {/* Content Right Side (or Full Width for basic analysis) */}
+              <div className={`flex flex-col overflow-y-auto ${(selectedDream.analysis_type === 'basic' || selectedDream.analysis_type === 'advanced') ? 'w-full' : 'flex-1'}`}>
                 <div className="p-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-purple-400 mb-2">{t.library.yourDream}</h3>
@@ -943,18 +1075,13 @@ export default function Library() {
                     </div>
                   )}
 
-                  {selectedDream.status === 'pending' && (
-                    <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400">
-                      {t.library.processingMessage}
-                    </div>
-                  )}
 
                   {/* Action buttons in modal */}
                   <div className="pt-6 border-t border-purple-500/20 flex gap-2 flex-wrap">
                     {/* Primary Image Button - Only for premium users with multiple images */}
                     {(() => {
                       const images = getDreamImages(selectedDream);
-                      if (isPremium && images.length > 1) {
+                      if (isPremium && images.length > 0) {
                         const originalImages = getOriginalImages(selectedDream);
                         const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
                         const currentImage = images[modalIndex];
@@ -976,6 +1103,27 @@ export default function Library() {
                             title={isPrimary ? 'Kapak görseli' : 'Kapak görseli olarak seç'}
                           >
                             <Star size={18} className={isPrimary ? 'fill-current' : ''} />
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+                    {/* Download Button - Only for dreams with images */}
+                    {(() => {
+                      const images = getDreamImages(selectedDream);
+                      if (images.length > 0) {
+                        const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
+                        const currentImage = images[modalIndex];
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadImage(currentImage, selectedDream.id, e);
+                            }}
+                            className="p-2.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 rounded-lg text-blue-400 transition-all duration-300 hover:scale-110"
+                            title={t.library.download}
+                          >
+                            <Download size={18} />
                           </button>
                         );
                       }

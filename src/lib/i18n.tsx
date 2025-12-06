@@ -26,10 +26,16 @@ interface Translations {
       learnMore: string;
       feature1Title: string;
       feature1Desc: string;
+      feature1Details: string;
       feature2Title: string;
       feature2Desc: string;
+      feature2Details: string;
       feature3Title: string;
       feature3Desc: string;
+      feature3Details: string;
+      feature4Title: string;
+      feature4Desc: string;
+      feature4Details: string;
     };
   about: {
     title: string;
@@ -43,10 +49,12 @@ interface Translations {
     step3: string;
     step4: string;
     step5: string;
-    privacyTitle: string;
-    privacyDesc: string;
-    quote: string;
-  };
+      privacyTitle: string;
+      privacyDesc: string;
+      socialTitle: string;
+      socialDesc: string;
+      quote: string;
+    };
   analyze: {
     title: string;
     subtitle: string;
@@ -71,6 +79,16 @@ interface Translations {
     processingTitle: string;
     pendingDreamWarning: string;
     dailyLimitExceeded: string;
+    analysisTypeLabel: string;
+    analysisTypeBasic: string;
+    analysisTypeAdvanced: string;
+      analysisTypeVisual: string;
+      analysisTypeVideo: string;
+      analysisTypeBasicDesc: string;
+      analysisTypeAdvancedDesc: string;
+      analysisTypeVisualDesc: string;
+      analysisTypeVideoDesc: string;
+      comingSoon: string;
   };
   library: {
     title: string;
@@ -79,10 +97,10 @@ interface Translations {
     analyzeFirst: string;
     yourDream: string;
     analysis: string;
-      pending: string;
-      processingMessage: string;
-      creating: string;
-      searchPlaceholder: string;
+    pending: string;
+    processingMessage: string;
+    creating: string;
+    searchPlaceholder: string;
     noDreamsFound: string;
     download: string;
     makePrivate: string;
@@ -90,19 +108,28 @@ interface Translations {
     addToFavorites: string;
     removeFromFavorites: string;
     delete: string;
-  };
-  social: {
-    title: string;
-    subtitle: string;
-    searchDreams: string;
-    searchUsers: string;
-    searchDreamsPlaceholder: string;
-    searchUsersPlaceholder: string;
+    totalDreams: string;
+    publicDreams: string;
+    privateDreams: string;
+    maxDreamLimit: string;
     all: string;
-    following: string;
-    recent: string;
-    popular: string;
-    trending: string;
+    favorites: string;
+    completed: string;
+  };
+    social: {
+      title: string;
+      subtitle: string;
+      searchDreams: string;
+      searchUsers: string;
+      searchDreamsPlaceholder: string;
+      searchUsersPlaceholder: string;
+      all: string;
+      following: string;
+      visualAnalyses: string;
+      textAnalyses: string;
+      recent: string;
+      popular: string;
+      trending: string;
     pending: string;
     noDreams: string;
     shareFirst: string;
@@ -312,6 +339,15 @@ interface Translations {
   pricing: {
     title: string;
     subtitle: string;
+    freePlan: {
+      title: string;
+      price: string;
+      description: string;
+      feature1: string;
+      feature2: string;
+      feature3: string;
+      cta: string;
+    };
     freeTrial: {
       title: string;
       price: string;
@@ -333,6 +369,7 @@ interface Translations {
       feature3: string;
       feature4: string;
       feature5: string;
+      feature6: string;
       cta: string;
     };
     premium: {
@@ -346,13 +383,35 @@ interface Translations {
       feature3: string;
       feature4: string;
       feature5: string;
+      feature6: string;
+      feature7: string;
       cta: string;
     };
-    whySubmirra: {
+    ruyagezer: {
       title: string;
+      badge: string;
+      popularBadge: string;
       description: string;
+      feature1: string;
+      feature2: string;
+      feature3: string;
+      feature4: string;
+      feature5: string;
+      feature6: string;
+      feature7: string;
+      feature9: string;
+      feature10: string;
     };
-  };
+      whySubmirra: {
+        title: string;
+        description: string;
+      };
+      ruyagezer: {
+        title: string;
+        badge: string;
+        description: string;
+      };
+    };
   trial: {
     activateTitle: string;
     activateDesc: string;
@@ -490,7 +549,7 @@ const translations: Record<Language, Translations> = {
       contact: 'Contact',
       dashboard: 'Dashboard',
       buy: 'Buy',
-      freeTrial: '5-Day Free Trial',
+      freeTrial: '7-Day Free Trial',
       signIn: 'Sign In',
       signOut: 'Sign Out',
       messages: 'Messages',
@@ -498,39 +557,44 @@ const translations: Record<Language, Translations> = {
     home: {
       title: 'Submirra',
       subtitle: 'Unlock the Secrets of Your Subconscious',
-      description: 'Experience the power of advanced dream analysis. Submirra combines sophisticated subconscious interpretation with stunning visual generation to help you understand the hidden meanings behind your dreams.',
+      description: 'Discover the hidden meanings in your dreams. Submirra analyzes your dreams and creates beautiful visualizations to help you understand your subconscious mind.',
       cta: 'Analyze Your Dream',
       getStarted: 'Get Started',
       learnMore: 'Learn More',
       feature1Title: 'Deep Analysis',
-      feature1Desc: 'Advanced analysis techniques reveal hidden meanings in your dreams through sophisticated subconscious interpretation. Our powerful algorithms decode symbolic patterns, emotional undertones, and psychological connections.',
+      feature1Desc: 'Get detailed insights about your dreams. We analyze symbols, emotions, and patterns to help you understand what your dreams mean.',
       feature1Details: 'Deep Analysis • Symbols • Emotions • Patterns',
       feature2Title: 'Visual Generation',
-      feature2Desc: 'Transform your dreams into stunning surreal visualizations that capture their essence and emotion. Our powerful system creates personalized artwork that brings your subconscious visions to life.',
-      feature2Details: 'Surreal Art • Color Mapping • Symbolic Visual • HD Output',
+      feature2Desc: 'See your dreams come to life with beautiful images. We create unique visualizations that capture the feeling and meaning of your dreams.',
+      feature2Details: 'Dream Images • Beautiful Art • High Quality • Personalized',
       feature3Title: 'Personal Library',
-      feature3Desc: 'Build your personal dream journal with all your analyses and visualizations in one place. Track patterns, explore recurring themes, and discover your subconscious evolution over time.',
-      feature3Details: 'Dream Journal • Pattern Track • Theme Analysis • Progress',
+      feature3Desc: 'Keep all your dreams in one place. Save your analyses and images, track patterns, and see how your dreams change over time.',
+      feature3Details: 'Dream Journal • Save Dreams • Track Patterns • Your History',
+      feature4Title: 'Social Community',
+      feature4Desc: 'Join a community of dream explorers. Share your dreams, see what others dream about, and connect with people who love exploring dreams.',
+      feature4Details: 'Community • Share Dreams • See Others • Connect',
     },
     about: {
       title: 'About Submirra',
       subtitle: 'Bridging the conscious and subconscious',
       missionTitle: 'Our Mission',
-      missionDesc: 'Submirra is dedicated to helping you understand the hidden messages within your dreams. Using advanced analysis technology, we analyze your dreams to reveal insights about your subconscious mind, emotional state, and inner desires.',
+      missionDesc: 'We help you understand your dreams. We analyze your dreams to show you what they might mean and how they connect to your feelings and thoughts.',
       howItWorksTitle: 'How It Works',
-      howItWorksDesc: 'Our platform combines the power of advanced analysis with artistic visualization:',
-      step1: 'Share your dream in up to 5000 characters',
-      step2: 'Our system processes your dream through advanced analysis',
-      step3: 'Receive a detailed subconscious analysis',
-      step4: 'Get a unique surreal visualization of your dream',
-      step5: 'Build your personal dream library over time',
+      howItWorksDesc: 'It is simple and easy:',
+      step1: 'Write your dream (up to 5000 characters)',
+      step2: 'We analyze your dream',
+      step3: 'Get a detailed analysis of what it means',
+      step4: 'Receive a beautiful image of your dream',
+      step5: 'Save everything in your personal library',
       privacyTitle: 'Privacy & Security',
-      privacyDesc: 'Your dreams are deeply personal, and we treat them with the utmost respect. All dream entries are encrypted and stored securely. Only you can access your dream library, and we never share your data with third parties. Your subconscious secrets are safe with us.',
-      quote: '"Dreams are the royal road to the unconscious" - Sigmund Freud',
+      privacyDesc: 'Your dreams are private and personal. We keep them safe and secure. Only you can see your dreams unless you choose to share them. We never share your data with anyone else.',
+      socialTitle: 'Social Community',
+      socialDesc: 'Join our community of dream explorers. Share your dreams with others, see what others dream about, and learn from different perspectives. Your privacy is important - only dreams you choose to share are visible to others.',
+      quote: 'Our website is currently under construction. Your valuable feedback and suggestions are very important to us as we work to provide you with the best experience.',
     },
     analyze: {
       title: 'Analyze Your Dream',
-      subtitle: 'Describe your dream in detail and discover its hidden meanings',
+      subtitle: 'Write your dream and discover what it means',
       label: 'Tell us about your dream',
       placeholder: 'I was walking through a forest filled with glowing trees...',
       characters: 'characters',
@@ -541,7 +605,7 @@ const translations: Record<Language, Translations> = {
       analyzeAnother: 'Analyze Another Dream',
       confirmationMessage: 'Your dream has been saved and will be analyzed shortly.',
       savedMessage: 'Your dream has been saved and will be analyzed shortly.',
-      trialBadge: '5-Day Free Trial',
+      trialBadge: '7-Day Free Trial',
       privacyLabel: 'Privacy',
       privacyPublic: 'Public',
       privacyPrivate: 'Private',
@@ -552,6 +616,16 @@ const translations: Record<Language, Translations> = {
       processingTitle: 'Dream Analysis in Progress',
       pendingDreamWarning: 'Please wait for your current dream analysis to complete first. You can analyze a new dream after the current analysis is finished.',
       dailyLimitExceeded: 'Your daily analysis limit has been reached. You have used {used}/{limit} analyses today. Limits will reset in 24 hours.',
+      analysisTypeLabel: 'Analysis Type',
+      analysisTypeBasic: 'Basic Analysis',
+      analysisTypeAdvanced: 'Advanced Analysis',
+      analysisTypeVisual: 'Visual Analysis',
+      analysisTypeVideo: 'Video Analysis',
+      analysisTypeBasicDesc: 'Basic dream meaning',
+      analysisTypeAdvancedDesc: 'Detailed dream analysis',
+      analysisTypeVisualDesc: 'With dream visualization',
+      analysisTypeVideoDesc: 'Animated dream video',
+      comingSoon: 'Coming Soon',
     },
     library: {
       title: 'Your Dream Library',
@@ -560,7 +634,6 @@ const translations: Record<Language, Translations> = {
       analyzeFirst: 'Analyze Your First Dream',
       yourDream: 'Your Dream',
       analysis: 'Analysis',
-      pending: 'Pending Analysis',
       processingMessage: 'Analysis is being processed',
       creating: 'Creating...',
       searchPlaceholder: 'Search your dreams...',
@@ -576,6 +649,14 @@ const translations: Record<Language, Translations> = {
       imageNotFound: 'Image not found',
       privacyUpdated: 'Privacy setting updated',
       privacyUpdateError: 'Failed to update privacy setting',
+      totalDreams: 'Total Dreams',
+      publicDreams: 'Public Dreams',
+      privateDreams: 'Private Dreams',
+      maxDreamLimit: 'Max Dream Limit',
+      all: 'All',
+      favorites: 'Favorites',
+      completed: 'Completed',
+      pending: 'Pending',
     },
     social: {
       title: 'Social Feed',
@@ -586,6 +667,8 @@ const translations: Record<Language, Translations> = {
       searchUsersPlaceholder: 'Search users by name or username...',
       all: 'All',
       following: 'Following',
+      visualAnalyses: 'Visual Analyses',
+      textAnalyses: 'Text Analyses',
       recent: 'Recent',
       popular: 'Popular',
       trending: 'Trending',
@@ -783,7 +866,7 @@ const translations: Record<Language, Translations> = {
       noNotifications: 'No notifications yet',
       dreamCompleted: 'Your dream analysis is ready! Click to view in your library.',
       dreamCompletedToast: 'Your dream analysis is ready!',
-      trialExpired: 'Your 5-day free trial has expired. Upgrade to continue using Submirra!',
+      trialExpired: 'Your 7-day free trial has expired. Upgrade to continue using Submirra!',
       someoneLiked: 'liked your dream',
       someoneCommented: 'commented on your dream',
       someoneFollowed: 'started following you',
@@ -797,12 +880,21 @@ const translations: Record<Language, Translations> = {
     pricing: {
       title: 'Simple, Transparent Pricing',
       subtitle: 'Choose the perfect plan for your dream analysis journey',
+      freePlan: {
+        title: 'Free Plan',
+        price: 'Free',
+        description: 'Perfect for unlimited basic dream analysis',
+        feature1: 'Unlimited basic dream analysis',
+        feature2: '30 dreams storage limit in library',
+        feature3: 'Access to social features',
+        cta: 'Get Free Plan',
+      },
       freeTrial: {
         title: 'Free Trial',
         price: 'Free',
         description: 'Perfect for exploring what Submirra can do',
-        feature1: '5 days of access',
-        feature2: '5 dream analyses total',
+        feature1: '7 days of access',
+        feature2: '7 advanced/visual dream analyses total',
         feature3: '',
         feature4: 'Beautiful visualizations for your dreams',
         cta: 'Start Free Trial',
@@ -810,58 +902,77 @@ const translations: Record<Language, Translations> = {
       },
       standard: {
         title: 'Standard',
-        price: '$15',
+        price: '$7',
         period: 'month',
         description: 'Great for regular dream journaling and insights',
-        feature1: '3 dream analyses per day',
-        feature2: '1 visualization per analysis',
-        feature3: '90 dreams storage per month',
-        feature4: 'Advanced analysis',
-        feature5: '',
+        feature1: 'Access to social features',
+        feature2: '60 dreams storage limit in library',
+        feature3: 'Advanced analysis unlocked',
+        feature4: 'Unlimited detailed and advanced analysis',
+        feature5: 'Visual analysis unlocked',
+        feature6: '3 visual analyses per day',
+        feature7: '1 image per analysis',
         cta: 'Get Standard',
       },
       premium: {
         badge: 'Most Popular',
         title: 'Premium',
-        price: '$30',
+        price: '$14',
         period: 'month',
         description: 'Unlock your subconscious completely with unlimited library and multiple visualizations',
-        feature1: '5 dream analyses per day',
-        feature2: '3 visualizations per analysis',
-        feature3: 'Unlimited library storage',
-        feature4: 'Priority analysis',
-        feature5: 'Never lose your dream history',
+        feature1: 'Access to social features',
+        feature2: '90 dreams storage limit in library',
+        feature3: 'Advanced analysis unlocked',
+        feature4: 'Unlimited, advanced and priority analysis',
+        feature5: 'Visual analysis unlocked',
+        feature6: '5 visual analyses per day',
+        feature7: '3 images per analysis',
         cta: 'Go Premium',
       },
       whySubmirra: {
         title: 'Why Choose Submirra?',
         description: 'Submirra uses cutting-edge analysis technology to decode your dreams, revealing hidden meanings about your subconscious mind, emotional state, and inner desires. Each analysis comes with unique surreal visualizations that capture the essence of your dream.',
       },
+      ruyagezer: {
+        title: 'Dreamwalker',
+        badge: 'Coming Soon',
+        popularBadge: 'Most Popular',
+        description: 'Experience the most comprehensive dream analysis with unlimited access to all premium features, advanced visualizations, and exclusive video analysis capabilities.',
+        feature1: 'Access to social features',
+        feature2: 'Unlimited dreams storage limit in library',
+        feature3: 'Advanced analysis unlocked',
+        feature4: 'Unlimited, advanced and priority analysis',
+        feature5: 'Visual analysis unlocked',
+        feature6: '7 visual analyses per day',
+        feature7: '3 images per analysis',
+        feature9: 'Video analysis unlocked',
+        feature10: '1 video analysis per day',
+      },
     },
     trial: {
-      activateTitle: 'Activate Your 5-Day Free Trial',
-      activateDesc: 'Experience the full power of Submirra with unlimited access for 5 days',
+      activateTitle: 'Activate Your 7-Day Free Trial',
+      activateDesc: 'Experience the full power of Submirra with unlimited access for 7 days',
       activateNow: 'Activate Free Trial',
       activating: 'Activating...',
       activated: 'Trial Activated!',
-      activatedDesc: 'Your 5-day free trial has been successfully activated.',
-      enjoy3Days: 'Enjoy 5 days of unlimited dream analysis and insights!',
+      activatedDesc: 'Your 7-day free trial has been successfully activated.',
+      enjoy3Days: 'Enjoy 7 days of unlimited dream analysis and insights!',
       alreadyUsed: 'Trial Already Used',
       alreadyUsedDesc: 'You have already used your free trial. Upgrade to a paid plan to continue enjoying Submirra.',
       viewPlans: 'View Plans',
       whatsIncluded: 'What\'s Included:',
-      feature1: '5 days of full access to all features',
-      feature2: '3 dream analyses with deep insights',
+      feature1: '7 days of full access to all features',
+      feature2: '7 advanced/visual dream analyses total',
       feature3: 'Beautiful visualizations for your dreams',
       duration: 'Duration',
-      threeDays: '5 Days',
+      threeDays: '7 Days',
       analyses: 'Analyses',
-      threeAnalyses: '3 Dreams',
+      threeAnalyses: '7 Dreams',
       features: 'Features',
       fullAccess: 'Full Access',
       startAnalyzing: 'Start Analyzing Dreams',
       trialExpired: 'Trial Expired',
-      trialExpiredDesc: 'Your 5-day free trial has expired. Upgrade to continue.',
+      trialExpiredDesc: 'Your 7-day free trial has expired. Upgrade to continue.',
       ipAlreadyUsed: 'This IP address has already used a free trial. Each person can only get one free trial.',
       ipCheckFailed: 'Could not verify eligibility. Please try again.',
     },
@@ -973,7 +1084,7 @@ const translations: Record<Language, Translations> = {
       contact: 'İletişim',
       dashboard: 'Kontrol Paneli',
       buy: 'Satın Al',
-      freeTrial: '5 Günlük Deneme',
+      freeTrial: '7 Günlük Deneme',
       signIn: 'Giriş Yap',
       signOut: 'Çıkış Yap',
       messages: 'Mesajlar',
@@ -981,39 +1092,44 @@ const translations: Record<Language, Translations> = {
     home: {
       title: 'Submirra',
       subtitle: 'Bilinçaltınızın Sırlarını Keşfedin',
-      description: 'Gelişmiş rüya analizi gücünü deneyimleyin. Submirra, sofistike bilinçaltı yorumlama ve etkileyici görsel üretimi birleştirerek rüyalarınızın gizli anlamlarını anlamanıza yardımcı olur.',
+      description: 'Rüyalarınızdaki gizli anlamları keşfedin. Submirra rüyalarınızı analiz eder ve güzel görseller oluşturarak bilinçaltınızı anlamanıza yardımcı olur.',
       cta: 'Rüyanı Analiz Et',
       getStarted: 'Başlayın',
       learnMore: 'Daha Fazla Bilgi',
       feature1Title: 'Derin Analiz',
-      feature1Desc: 'Gelişmiş analiz teknikleri, sofistike bilinçaltı yorumlama yoluyla rüyalarınızdaki gizli anlamları ortaya çıkarır. Güçlü algoritmalarımız sembolik kalıpları, duygusal tonları ve psikolojik bağlantıları çözer.',
+      feature1Desc: 'Rüyalarınız hakkında detaylı bilgi alın. Sembolleri, duyguları ve kalıpları analiz ederek rüyalarınızın ne anlama geldiğini anlamanıza yardımcı oluyoruz.',
       feature1Details: 'Derin Analiz • Semboller • Duygular • Kalıplar',
       feature2Title: 'Görsel Üretimi',
-      feature2Desc: 'Rüyalarınızı, özünü ve duygusunu yakalayan muhteşem sürreal görselleştirmelere dönüştürün. Güçlü sistemimiz bilinçaltı vizyonlarınızı hayata geçiren kişiselleştirilmiş sanat eserleri yaratır.',
-      feature2Details: 'Sürreal Sanat • Renk Haritası • Sembolik Görsel • HD Çıktı',
+      feature2Desc: 'Rüyalarınızı güzel görsellerle görün. Rüyalarınızın hissini ve anlamını yakalayan özel görseller oluşturuyoruz.',
+      feature2Details: 'Rüya Görselleri • Güzel Sanat • Yüksek Kalite • Kişiselleştirilmiş',
       feature3Title: 'Kişisel Kütüphane',
-      feature3Desc: 'Tüm analizleriniz ve görselleştirmelerinizle kişisel rüya günlüğünüzü tek bir yerde oluşturun. Kalıpları takip edin, tekrarlayan temaları keşfedin ve zaman içinde bilinçaltı evrimimizi keşfedin.',
-      feature3Details: 'Rüya Günlüğü • Kalıp Takip • Tema Analiz • İlerleme',
+      feature3Desc: 'Tüm rüyalarınızı tek bir yerde saklayın. Analizlerinizi ve görsellerinizi kaydedin, kalıpları takip edin ve rüyalarınızın zamanla nasıl değiştiğini görün.',
+      feature3Details: 'Rüya Günlüğü • Rüya Kaydet • Kalıp Takip • Geçmişiniz',
+      feature4Title: 'Sosyal Topluluk',
+      feature4Desc: 'Rüya keşifçileri topluluğuna katılın. Rüyalarınızı paylaşın, başkalarının rüyalarını görün ve rüyaları seven insanlarla bağlantı kurun.',
+      feature4Details: 'Topluluk • Rüya Paylaş • Başkalarını Gör • Bağlan',
     },
     about: {
       title: 'Submirra Hakkında',
       subtitle: 'Bilinç ve bilinçaltı arasında köprü',
       missionTitle: 'Misyonumuz',
-      missionDesc: 'Submirra, rüyalarınızdaki gizli mesajları anlamanıza yardımcı olmaya adanmıştır. Gelişmiş analiz teknolojisi kullanarak, bilinçaltı zihniniz, duygusal durumunuz ve iç arzularınız hakkında içgörüler ortaya çıkarmak için rüyalarınızı analiz ediyoruz.',
+      missionDesc: 'Rüyalarınızı anlamanıza yardımcı oluyoruz. Rüyalarınızı analiz ederek ne anlama geldiklerini ve duygularınız ve düşüncelerinizle nasıl bağlantılı olduklarını gösteriyoruz.',
       howItWorksTitle: 'Nasıl Çalışır',
-      howItWorksDesc: 'Platformumuz, gelişmiş analiz gücünü sanatsal görselleştirme ile birleştirir:',
-      step1: 'Rüyanızı 5000 karaktere kadar paylaşın',
-      step2: 'Sistemimiz rüyanızı gelişmiş analiz yöntemleriyle işler',
-      step3: 'Detaylı bir bilinçaltı analizi alın',
-      step4: 'Rüyanızın benzersiz sürreal bir görselleştirmesini elde edin',
-      step5: 'Zamanla kişisel rüya kütüphanenizi oluşturun',
+      howItWorksDesc: 'Çok basit ve kolay:',
+      step1: 'Rüyanızı yazın (5000 karaktere kadar)',
+      step2: 'Rüyanızı analiz ediyoruz',
+      step3: 'Ne anlama geldiğine dair detaylı analiz alın',
+      step4: 'Rüyanızın güzel bir görselini alın',
+      step5: 'Her şeyi kişisel kütüphanenizde saklayın',
       privacyTitle: 'Gizlilik ve Güvenlik',
-      privacyDesc: 'Rüyalarınız son derece kişiseldir ve onlara büyük bir saygıyla yaklaşıyoruz. Tüm rüya girişleri şifrelenir ve güvenli bir şekilde saklanır. Yalnızca siz rüya kütüphanenize erişebilirsiniz ve verilerinizi asla üçüncü taraflarla paylaşmayız. Bilinçaltı sırlarınız bizimle güvendedir.',
-      quote: '"Rüyalar bilinçdışına açılan kraliyet yoludur" - Sigmund Freud',
+      privacyDesc: 'Rüyalarınız özel ve kişiseldir. Onları güvenli bir şekilde saklıyoruz. Paylaşmayı seçmediğiniz sürece rüyalarınızı sadece siz görebilirsiniz. Verilerinizi başka kimseyle paylaşmıyoruz.',
+      socialTitle: 'Sosyal Topluluk',
+      socialDesc: 'Rüya keşifçileri topluluğumuza katılın. Rüyalarınızı başkalarıyla paylaşın, başkalarının rüyalarını görün ve farklı bakış açılarından öğrenin. Gizliliğiniz önemlidir - sadece paylaşmayı seçtiğiniz rüyalar başkaları tarafından görülebilir.',
+      quote: 'Sitemiz henüz yapım aşamasındadır. Siz değerli kullanıcılarımızı memnun etmek için geri bildirimleriniz ve eleştirileriniz bizim için çok önemlidir.',
     },
     analyze: {
       title: 'Rüyanızı Analiz Edin',
-      subtitle: 'Rüyanızı detaylı bir şekilde anlatın ve gizli anlamlarını keşfedin',
+      subtitle: 'Rüyanızı yazın ve ne anlama geldiğini keşfedin',
       label: 'Rüyanız hakkında bize bilgi verin',
       placeholder: 'Parlayan ağaçlarla dolu bir ormanda yürüyordum...',
       characters: 'karakter',
@@ -1024,7 +1140,7 @@ const translations: Record<Language, Translations> = {
       analyzeAnother: 'Başka Bir Rüya Analiz Et',
       confirmationMessage: 'Rüyanız kaydedildi ve kısa süre içinde analiz edilecek.',
       savedMessage: 'Rüyanız kaydedildi ve kısa süre içinde analiz edilecek.',
-      trialBadge: '5 Günlük Ücretsiz Deneme',
+      trialBadge: '7 Günlük Ücretsiz Deneme',
       privacyLabel: 'Gizlilik',
       privacyPublic: 'Herkese Açık',
       privacyPrivate: 'Özel',
@@ -1035,6 +1151,16 @@ const translations: Record<Language, Translations> = {
       processingTitle: 'Rüya Analizi Devam Ediyor',
       pendingDreamWarning: 'Lütfen önce mevcut rüya analizinizin tamamlanmasını bekleyin. Analiz tamamlandıktan sonra yeni bir rüya analiz edebilirsiniz.',
       dailyLimitExceeded: 'Günlük analiz limitiniz tükendi. Bugün {used}/{limit} analiz yaptınız. Limitler 24 saat sonra yenilenecektir.',
+      analysisTypeLabel: 'Analiz Tipi',
+      analysisTypeBasic: 'Temel Analiz',
+      analysisTypeAdvanced: 'Gelişmiş Analiz',
+      analysisTypeVisual: 'Görselli Analiz',
+      analysisTypeVideo: 'Videolu Analiz',
+      analysisTypeBasicDesc: 'Temel rüya anlamı',
+      analysisTypeAdvancedDesc: 'Detaylı rüya analizi',
+      analysisTypeVisualDesc: 'Rüya görselleştirmesi ile',
+      analysisTypeVideoDesc: 'Animasyonlu rüya videosu',
+      comingSoon: 'Yakında',
     },
     library: {
       title: 'Rüya Kütüphaneniz',
@@ -1043,7 +1169,6 @@ const translations: Record<Language, Translations> = {
       analyzeFirst: 'İlk Rüyanızı Analiz Edin',
       yourDream: 'Rüyanız',
       analysis: 'Analiz',
-      pending: 'Analiz Bekleniyor',
       processingMessage: 'Analiz işleniyor',
       creating: 'Oluşturuluyor...',
       searchPlaceholder: 'Rüyalarınızda arayın...',
@@ -1059,6 +1184,14 @@ const translations: Record<Language, Translations> = {
       imageNotFound: 'Görsel bulunamadı',
       privacyUpdated: 'Gizlilik ayarı güncellendi',
       privacyUpdateError: 'Gizlilik ayarı değiştirilemedi',
+      totalDreams: 'Toplam Rüya',
+      publicDreams: 'Herkese Açık Rüyalar',
+      privateDreams: 'Özel Rüyalar',
+      maxDreamLimit: 'Maksimum Rüya Limiti',
+      all: 'Tümü',
+      favorites: 'Favoriler',
+      completed: 'Tamamlanan',
+      pending: 'Beklemede',
     },
     social: {
       title: 'Sosyal Akış',
@@ -1069,6 +1202,8 @@ const translations: Record<Language, Translations> = {
       searchUsersPlaceholder: 'İsim veya kullanıcı adına göre kullanıcı ara...',
       all: 'Tümü',
       following: 'Takip Edilenler',
+      visualAnalyses: 'Görselli Analizler',
+      textAnalyses: 'Yazılı Analizler',
       recent: 'Yeni',
       popular: 'Popüler',
       trending: 'Trend',
@@ -1269,7 +1404,7 @@ const translations: Record<Language, Translations> = {
       noNotifications: 'Henüz bildirim yok',
       dreamCompleted: 'Rüya analiziniz hazır! Kütüphanenizde görüntülemek için tıklayın.',
       dreamCompletedToast: 'Rüya analiziniz hazır!',
-      trialExpired: '5 günlük ücretsiz denemeniz sona erdi. Submirra\'yı kullanmaya devam etmek için yükseltin!',
+      trialExpired: '7 günlük ücretsiz denemeniz sona erdi. Submirra\'yı kullanmaya devam etmek için yükseltin!',
       someoneLiked: 'rüyanızı beğendi',
       someoneCommented: 'rüyanıza yorum yaptı',
       someoneFollowed: 'sizi takip etmeye başladı',
@@ -1284,12 +1419,21 @@ const translations: Record<Language, Translations> = {
     pricing: {
       title: 'Basit ve Şeffaf Fiyatlandırma',
       subtitle: 'Rüya analizi yolculuğunuz için mükemmel planı seçin',
+      freePlan: {
+        title: 'Bedava Plan',
+        price: 'Ücretsiz',
+        description: 'Sınırsız temel rüya analizi için mükemmel',
+        feature1: 'Sınırsız bedava temel rüya analizi',
+        feature2: 'Kütüphanede 30 rüyaya kadar saklama limiti',
+        feature3: 'Sosyal kısmına erişim hakkı',
+        cta: 'Bedava Planı Al',
+      },
       freeTrial: {
         title: 'Ücretsiz Deneme',
         price: 'Ücretsiz',
         description: 'Submirra\'nın neler yapabileceğini keşfetmek için mükemmel',
-        feature1: '5 gün erişim',
-        feature2: 'Toplam 5 rüya analizi',
+        feature1: '7 gün erişim',
+        feature2: 'Toplam 7 gelişmiş/görselli rüya analizi',
         feature3: '',
         feature4: 'Rüyalarınız için güzel görselleştirmeler',
         cta: 'Ücretsiz Deneyin',
@@ -1297,58 +1441,77 @@ const translations: Record<Language, Translations> = {
       },
       standard: {
         title: 'Standart',
-        price: '₺600',
+        price: '₺300',
         period: 'ay',
         description: 'Düzenli rüya günlüğü ve içgörüler için harika',
-        feature1: 'Günde 3 rüya analizi',
-        feature2: 'Analiz başına 1 görselleştirme',
-        feature3: 'Aylık 90 rüya saklama kapasitesi',
-        feature4: 'Gelişmiş analiz',
-        feature5: '',
+        feature1: 'Sosyal kısmına erişim hakkı',
+        feature2: 'Kütüphanede 60 adet rüyaya kadar saklama limiti',
+        feature3: 'Gelişmiş analiz kilidi açılır',
+        feature4: 'Sınırsız, daha detaylı ve gelişmiş analiz',
+        feature5: 'Görselli analiz kilidi açılır',
+        feature6: 'Günde 3 rüyaya kadar görselli analiz hakkı',
+        feature7: 'Analiz başına 1 görsel',
         cta: 'Standart Al',
       },
       premium: {
         badge: 'En Popüler',
         title: 'Premium',
-        price: '₺1,200',
+        price: '₺600',
         period: 'ay',
         description: 'Sınırsız kütüphane ve çoklu görselleştirmelerle bilinçaltınızın kilidini tamamen açın',
-        feature1: 'Günde 5 rüya analizi',
-        feature2: 'Analiz başına 3 görselleştirme',
-        feature3: 'Sınırsız kütüphane depolama',
-        feature4: 'Öncelikli analiz',
-        feature5: 'Rüya geçmişinizi asla kaybetmeyin',
+        feature1: 'Sosyal kısmına erişim hakkı',
+        feature2: 'Kütüphanede 90 adet rüyaya kadar saklama limiti',
+        feature3: 'Gelişmiş analiz kilidi açılır',
+        feature4: 'Sınırsız, gelişmiş ve öncelikli analiz hakkı',
+        feature5: 'Görselli analiz kilidi açılır',
+        feature6: 'Günde 5 defaya kadar görselli analiz hakkı',
+        feature7: 'Analiz başına 3 görsel',
         cta: 'Premium Ol',
       },
       whySubmirra: {
         title: 'Neden Submirra?',
         description: 'Submirra, bilinçaltı zihniniz, duygusal durumunuz ve iç arzularınız hakkında gizli anlamları ortaya çıkarmak için son teknoloji analiz teknolojisini kullanır. Her analiz, rüyanızın özünü yakalayan benzersiz sürreal görselleştirmeler ile gelir.',
       },
+      ruyagezer: {
+        title: 'Rüyagezer',
+        badge: 'Yakında',
+        popularBadge: 'En Popüler',
+        description: 'Tüm premium özelliklere, gelişmiş görselleştirmelere ve özel videolu analiz yeteneklerine sınırsız erişimle en kapsamlı rüya analizi deneyimini yaşayın.',
+        feature1: 'Sosyal kısmına erişim hakkı',
+        feature2: 'Kütüphanede sınırsız rüyaya kadar saklama limiti',
+        feature3: 'Gelişmiş analiz kilidi açılır',
+        feature4: 'Sınırsız, gelişmiş ve öncelikli analiz hakkı',
+        feature5: 'Analiz sayfasında görselli analiz kilidi açılır',
+        feature6: 'Günde 7 defaya kadar görselli analiz hakkı',
+        feature7: 'Analiz sayfasında görselli analiz seçilirse, analiz başına 3 görsel',
+        feature9: 'Videolu analiz kilidi açılır',
+        feature10: 'Günde 1 defaya kadar videolu analiz hakkı',
+      },
     },
     trial: {
-      activateTitle: '5 Günlük Ücretsiz Denemenizi Etkinleştirin',
-      activateDesc: 'Submirra\'nın tüm gücünü 5 gün boyunca sınırsız erişimle deneyimleyin',
+      activateTitle: '7 Günlük Ücretsiz Denemenizi Etkinleştirin',
+      activateDesc: 'Submirra\'nın tüm gücünü 7 gün boyunca sınırsız erişimle deneyimleyin',
       activateNow: 'Ücretsiz Denemeyi Başlat',
       activating: 'Etkinleştiriliyor...',
       activated: 'Deneme Etkinleştirildi!',
-      activatedDesc: '5 günlük ücretsiz denemeniz başarıyla etkinleştirildi.',
-      enjoy3Days: '5 gün boyunca sınırsız rüya analizi ve içgörülerin tadını çıkarın!',
+      activatedDesc: '7 günlük ücretsiz denemeniz başarıyla etkinleştirildi.',
+      enjoy3Days: '7 gün boyunca sınırsız rüya analizi ve içgörülerin tadını çıkarın!',
       alreadyUsed: 'Deneme Zaten Kullanıldı',
       alreadyUsedDesc: 'Ücretsiz denemenizi zaten kullandınız. Submirra\'nın keyfini çıkarmaya devam etmek için ücretli bir plana yükseltin.',
       viewPlans: 'Planları Görüntüle',
       whatsIncluded: 'Neler Dahil:',
-      feature1: 'Tüm özelliklere 5 gün tam erişim',
-      feature2: 'Derin içgörülerle 5 rüya analizi',
+      feature1: 'Tüm özelliklere 7 gün tam erişim',
+      feature2: 'Toplam 7 gelişmiş/görselli rüya analizi',
       feature3: 'Rüyalarınız için güzel görselleştirmeler',
       duration: 'Süre',
-      threeDays: '5 Gün',
+      threeDays: '7 Gün',
       analyses: 'Analizler',
-      threeAnalyses: '5 Rüya',
+      threeAnalyses: '7 Rüya',
       features: 'Özellikler',
       fullAccess: 'Tam Erişim',
       startAnalyzing: 'Rüya Analizine Başla',
       trialExpired: 'Deneme Süresi Doldu',
-      trialExpiredDesc: '5 günlük ücretsiz denemeniz sona erdi. Devam etmek için yükseltin.',
+      trialExpiredDesc: '7 günlük ücretsiz denemeniz sona erdi. Devam etmek için yükseltin.',
       ipAlreadyUsed: 'Bu IP adresinden daha önce ücretsiz deneme kullanılmış. Her kişi yalnızca bir kez ücretsiz deneme alabilir.',
       ipCheckFailed: 'Uygunluk kontrolü yapılamadı. Lütfen tekrar deneyin.',
     },

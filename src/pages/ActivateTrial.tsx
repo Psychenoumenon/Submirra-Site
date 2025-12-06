@@ -126,7 +126,7 @@ export default function ActivateTrial() {
       }
 
       const trialStart = new Date();
-      const trialEnd = new Date(trialStart.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days
+      const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
       console.log('Activating trial for user:', user.id);
       console.log('Trial start:', trialStart.toISOString());
