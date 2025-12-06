@@ -536,7 +536,7 @@ export default function Analyze() {
                       }
                     }}
                     disabled={!isDeveloper && planType === null}
-                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${
+                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative ${
                       !isDeveloper && planType === null
                         ? 'border-slate-600/30 bg-slate-950/20 opacity-50 cursor-not-allowed'
                         : textAnalysisType === 'basic'
@@ -571,8 +571,18 @@ export default function Analyze() {
                         return;
                       }
                       // Check if user can use advanced analysis (trial active, standard/premium, not free or expired trial)
-                      if (planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium')) {
-                        showToast('Gelişmiş analiz için standart plan veya üzeri gereklidir', 'info');
+                      if (planType === 'free') {
+                        showToast('Gelişmiş analiz için trial planını aktifleştirin veya standart plan satın alın', 'info');
+                        navigate('/pricing');
+                        return;
+                      }
+                      if (planType === 'trial' && trialExpired) {
+                        showToast('Trial süreniz dolmuş. Gelişmiş analiz için standart plan satın alın', 'info');
+                        navigate('/pricing');
+                        return;
+                      }
+                      if (planType !== 'trial' && planType !== 'standard' && planType !== 'premium') {
+                        showToast('Gelişmiş analiz için trial planını aktifleştirin veya standart plan satın alın', 'info');
                         navigate('/pricing');
                         return;
                       }
@@ -623,8 +633,18 @@ export default function Analyze() {
                         return;
                       }
                       // Check if user can use visual analysis (trial active, standard/premium, not free or expired trial, or developers)
-                      if (!isDeveloper && (planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium'))) {
-                        showToast('Görselli analiz için standart plan veya üzeri gereklidir', 'info');
+                      if (planType === 'free') {
+                        showToast('Görselli analiz için trial planını aktifleştirin veya standart plan satın alın', 'info');
+                        navigate('/pricing');
+                        return;
+                      }
+                      if (planType === 'trial' && trialExpired) {
+                        showToast('Trial süreniz dolmuş. Görselli analiz için standart plan satın alın', 'info');
+                        navigate('/pricing');
+                        return;
+                      }
+                      if (planType !== 'trial' && planType !== 'standard' && planType !== 'premium') {
+                        showToast('Görselli analiz için trial planını aktifleştirin veya standart plan satın alın', 'info');
                         navigate('/pricing');
                         return;
                       }
