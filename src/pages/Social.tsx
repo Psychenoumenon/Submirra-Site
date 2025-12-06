@@ -824,10 +824,14 @@ export default function Social() {
     );
   }
 
+  // Check if user is developer
+  const isDeveloper = user ? isDeveloperSync(user.id) : false;
+  
   // Check if user is not logged in or has no plan (null means no plan)
-  const hasNoPlan = user && planType === null;
+  // Developers can always access, even without a plan
+  const hasNoPlan = user && planType === null && !isDeveloper;
   const isNotLoggedIn = !user;
-  const shouldBlur = hasNoPlan || isNotLoggedIn;
+  const shouldBlur = (hasNoPlan || isNotLoggedIn) && !isDeveloper;
 
   return (
     <div className="min-h-screen relative pt-24 pb-16 px-4 md:px-6">
@@ -1748,8 +1752,8 @@ export default function Social() {
                       ? 'Sosyal sayfasına erişim için önce kaydolmanız veya giriş yapmanız gerekmektedir.'
                       : 'You must sign up or log in first to access the social page.')
                   : (language === 'tr' 
-                      ? 'Sosyal sayfasına erişim için en azından bedava plana sahip olmalısınız.'
-                      : 'You must have at least a free plan to access the social page.')
+                      ? 'Sosyal kısmına erişim sağlayabilmek için en azından bedava plana sahip olmalısınız.'
+                      : 'You must have at least a free plan to access the social section.')
                 }
               </p>
             </div>

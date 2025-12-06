@@ -93,3 +93,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 4. Add comment explaining that dreams are never deleted on plan change
 COMMENT ON FUNCTION clear_trial_library_on_expiration(uuid) IS 'DISABLED: This function no longer deletes dreams. Dreams are preserved when plan changes.';
 
+

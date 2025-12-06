@@ -36,7 +36,7 @@ export default function Library() {
   const [loading, setLoading] = useState(true);
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'pending' | 'favorites'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'favorites'>('all');
   const [analysisTypeFilter, setAnalysisTypeFilter] = useState<'visual' | 'text'>('visual');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -489,19 +489,13 @@ export default function Library() {
       (dream.analysis_text && dream.analysis_text.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesFilter = filterStatus === 'all' ||
-      (filterStatus === 'completed' && dream.status === 'completed') ||
-      (filterStatus === 'pending' && dream.status === 'pending') ||
       (filterStatus === 'favorites' && dream.is_favorite);
 
     // Filter by visual presence (not analysis type)
-    // Pending rüyalar sadece görselli analiz sekmesinde gösterilmeli
     const images = getDreamImages(dream);
-    const isPending = dream.status === 'pending' || dream.status === 'processing';
-    const matchesAnalysisType = isPending 
-      ? analysisTypeFilter === 'visual' // Pending rüyalar sadece görselli analiz sekmesinde gösterilir
-      : analysisTypeFilter === 'visual' 
-        ? images.length > 0 // Show all with images (any type)
-        : images.length === 0; // Show all without images (any type)
+    const matchesAnalysisType = analysisTypeFilter === 'visual' 
+      ? images.length > 0 // Show all with images (any type)
+      : images.length === 0; // Show all without images (any type)
 
     return matchesSearch && matchesFilter && matchesAnalysisType;
   });
@@ -616,26 +610,6 @@ export default function Library() {
               >
                 <Heart size={14} className={filterStatus === 'favorites' ? 'fill-current' : ''} />
                 {t.library.favorites}
-              </button>
-              <button
-                onClick={() => setFilterStatus('completed')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  filterStatus === 'completed'
-                    ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
-                    : 'bg-slate-800/50 text-slate-400 hover:text-slate-300'
-                }`}
-              >
-                {t.library.completed}
-              </button>
-              <button
-                onClick={() => setFilterStatus('pending')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  filterStatus === 'pending'
-                    ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
-                    : 'bg-slate-800/50 text-slate-400 hover:text-slate-300'
-                }`}
-              >
-                {t.library.pending}
               </button>
             </div>
           </div>
@@ -828,10 +802,10 @@ export default function Library() {
                       {/* Butonlar görselin altında, kompakt - sadece completed durumunda göster */}
                       {dream.status === 'completed' && (
                         <div className="flex gap-1.5 mt-4 mb-4 justify-end flex-wrap">
-                          {/* Primary Image Button - Only for premium users with images */}
+                          {/* Primary Image Button - Only for premium users with premium dreams (advanced_visual) */}
                           {(() => {
                             const images = getDreamImages(dream);
-                            if (isPremium && images.length > 0) {
+                            if (isPremium && dream.analysis_type === 'advanced_visual' && images.length > 0) {
                               const originalImages = getOriginalImages(dream);
                               const currentIndex = carouselIndices[dream.id] || 0;
                               const currentImage = images[currentIndex];
@@ -1078,10 +1052,10 @@ export default function Library() {
 
                   {/* Action buttons in modal */}
                   <div className="pt-6 border-t border-purple-500/20 flex gap-2 flex-wrap">
-                    {/* Primary Image Button - Only for premium users with multiple images */}
+                    {/* Primary Image Button - Only for premium users with premium dreams (advanced_visual) */}
                     {(() => {
                       const images = getDreamImages(selectedDream);
-                      if (isPremium && images.length > 0) {
+                      if (isPremium && selectedDream.analysis_type === 'advanced_visual' && images.length > 0) {
                         const originalImages = getOriginalImages(selectedDream);
                         const modalIndex = carouselIndices[`modal-${selectedDream.id}`] || 0;
                         const currentImage = images[modalIndex];

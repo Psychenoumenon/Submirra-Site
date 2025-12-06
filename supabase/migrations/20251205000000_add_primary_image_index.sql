@@ -21,3 +21,4 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_dreams_primary_image_index ON dreams(primary_image_index) WHERE primary_image_index IS NOT NULL;
 
 
+

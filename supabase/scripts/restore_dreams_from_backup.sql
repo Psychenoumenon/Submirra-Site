@@ -72,3 +72,4 @@ WHERE user_id = '4e319154-a316-4367-b8d6-d7776cef9d70'::uuid
 -- Alternative: If you have a CSV export, you can use Supabase's import feature
 -- or use psql COPY command to import the data
 
+

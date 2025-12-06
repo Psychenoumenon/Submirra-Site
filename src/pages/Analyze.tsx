@@ -38,6 +38,7 @@ export default function Analyze() {
   const [planType, setPlanType] = useState<'free' | 'trial' | 'standard' | 'premium' | null>(null);
   const [visualAnalysesUsed, setVisualAnalysesUsed] = useState<{ used: number; limit: number } | null>(null);
   const [trialExpired, setTrialExpired] = useState(false);
+  const [isDeveloper, setIsDeveloper] = useState(false);
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
@@ -56,6 +57,7 @@ export default function Analyze() {
     try {
       // Check if user is developer (developers have unlimited analysis)
       const isDev = isDeveloperSync(user.id);
+      setIsDeveloper(isDev);
       
       if (isDev) {
         // Developers have unlimited analysis - show infinity symbol
@@ -203,6 +205,14 @@ export default function Analyze() {
 
     if (!dreamText.trim() || !user) return;
 
+    // CRITICAL: Block users without any plan from analyzing
+    if (!isDeveloper && planType === null) {
+      setError('Analiz yapmak için lütfen bir plan satın alın.');
+      showToast('Analiz yapmak için lütfen bir plan satın alın. Pricing sayfasına gidin.', 'error');
+      navigate('/pricing');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -314,10 +324,17 @@ export default function Analyze() {
           }
         }
 
-        // For free plan users, block advanced and visual analysis
+        // For free plan users, block advanced and visual analysis (trial users can use them)
         if (planType === 'free' && (analysisType === 'advanced' || analysisType === 'basic_visual' || analysisType === 'advanced_visual')) {
           setError('Bu analiz tipi için standart plan veya üzeri gereklidir.');
           showToast('Bu analiz tipi için standart plan veya üzeri gereklidir.', 'error');
+          setIsSubmitting(false);
+          return;
+        }
+        // For expired trial users, block advanced and visual analysis
+        if (planType === 'trial' && trialExpired && (analysisType === 'advanced' || analysisType === 'basic_visual' || analysisType === 'advanced_visual')) {
+          setError('Trial süreniz dolmuş. Bu analiz tipi için standart plan veya üzeri gereklidir.');
+          showToast('Trial süreniz dolmuş. Bu analiz tipi için standart plan veya üzeri gereklidir.', 'error');
           setIsSubmitting(false);
           return;
         }
@@ -484,15 +501,6 @@ export default function Analyze() {
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto animate-fade-in-delay">
             <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-2xl p-5 md:p-8 relative hover:border-pink-500/30 transition-all duration-300 shadow-xl shadow-pink-500/5">
               <div className="absolute -top-3 right-4 md:right-6 flex gap-2 items-center">
-                {remainingAnalyses && (
-                  <div className="px-3 py-1 bg-slate-800/80 border border-purple-500/30 rounded-full text-purple-300 text-xs font-semibold">
-                    {remainingAnalyses.limit === Infinity ? (
-                      <span className="text-cyan-400">∞</span>
-                    ) : (
-                      `${remainingAnalyses.used}/${remainingAnalyses.limit}`
-                    )}
-                  </div>
-                )}
                 <button
                   onClick={() => navigate('/pricing')}
                   className="px-2 md:px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold rounded-full shadow-lg animate-pulse hover:from-purple-500 hover:to-pink-500 transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -510,6 +518,12 @@ export default function Analyze() {
                   <button
                     type="button"
                     onClick={() => {
+                      // Block users without any plan
+                      if (!isDeveloper && planType === null) {
+                        showToast('Analiz yapmak için lütfen bir plan satın alın.', 'error');
+                        navigate('/pricing');
+                        return;
+                      }
                       // If advanced is selected, remove it and select basic
                       if (textAnalysisType === 'advanced') {
                         setTextAnalysisType('basic');
@@ -521,12 +535,20 @@ export default function Analyze() {
                         setTextAnalysisType('basic');
                       }
                     }}
+                    disabled={!isDeveloper && planType === null}
                     className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${
-                      textAnalysisType === 'basic'
+                      !isDeveloper && planType === null
+                        ? 'border-slate-600/30 bg-slate-950/20 opacity-50 cursor-not-allowed'
+                        : textAnalysisType === 'basic'
                         ? 'border-pink-500 bg-pink-500/10'
                         : 'border-purple-500/30 bg-slate-950/30 hover:border-purple-500/50'
                     }`}
                   >
+                    {!isDeveloper && planType === null && (
+                      <div className="absolute top-2 right-2">
+                        <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded">🔒</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                         textAnalysisType === 'basic' ? 'border-pink-400 bg-pink-400' : 'border-slate-400'
@@ -542,8 +564,14 @@ export default function Analyze() {
                   <button
                     type="button"
                     onClick={() => {
-                      // Check if user can use advanced analysis (only standard/premium, not free or expired trial)
-                      if (planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium')) {
+                      // Block users without any plan
+                      if (!isDeveloper && planType === null) {
+                        showToast('Analiz yapmak için lütfen bir plan satın alın.', 'error');
+                        navigate('/pricing');
+                        return;
+                      }
+                      // Check if user can use advanced analysis (trial active, standard/premium, not free or expired trial)
+                      if (planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium')) {
                         showToast('Gelişmiş analiz için standart plan veya üzeri gereklidir', 'info');
                         navigate('/pricing');
                         return;
@@ -559,16 +587,16 @@ export default function Analyze() {
                         setTextAnalysisType('advanced');
                       }
                     }}
-                    disabled={planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium')}
+                    disabled={!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium'))}
                     className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative ${
-                      planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium')
+                      !isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium'))
                         ? 'border-slate-600/30 bg-slate-950/20 opacity-50 cursor-not-allowed'
                         : textAnalysisType === 'advanced'
                         ? 'border-pink-500 bg-pink-500/10'
                         : 'border-purple-500/30 bg-slate-950/30 hover:border-purple-500/50'
                     }`}
                   >
-                    {(planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium')) && (
+                    {!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium')) && (
                       <div className="absolute top-2 right-2">
                         <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded">🔒</span>
                       </div>
@@ -588,8 +616,14 @@ export default function Analyze() {
                   <button
                     type="button"
                     onClick={() => {
-                      // Check if user can use visual analysis (only standard/premium, not free or expired trial)
-                      if (planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium')) {
+                      // Block users without any plan
+                      if (!isDeveloper && planType === null) {
+                        showToast('Analiz yapmak için lütfen bir plan satın alın.', 'error');
+                        navigate('/pricing');
+                        return;
+                      }
+                      // Check if user can use visual analysis (trial active, standard/premium, not free or expired trial, or developers)
+                      if (!isDeveloper && (planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium'))) {
                         showToast('Görselli analiz için standart plan veya üzeri gereklidir', 'info');
                         navigate('/pricing');
                         return;
@@ -605,16 +639,27 @@ export default function Analyze() {
                       // Toggle visual selection (can be combined with basic or advanced)
                       setIsVisualSelected(!isVisualSelected);
                     }}
-                    disabled={planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium') || ((planType === 'standard' || planType === 'premium') && visualAnalysesUsed && visualAnalysesUsed.used >= visualAnalysesUsed.limit)}
+                    disabled={!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium') || ((planType === 'standard' || planType === 'premium') && visualAnalysesUsed && visualAnalysesUsed.used >= visualAnalysesUsed.limit))}
                     className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative ${
-                      planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium') || ((planType === 'standard' || planType === 'premium') && visualAnalysesUsed && visualAnalysesUsed.used >= visualAnalysesUsed.limit)
+                      !isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium') || ((planType === 'standard' || planType === 'premium') && visualAnalysesUsed && visualAnalysesUsed.used >= visualAnalysesUsed.limit))
                         ? 'border-slate-600/30 bg-slate-950/20 opacity-50 cursor-not-allowed'
                         : isVisualSelected
                         ? 'border-pink-500 bg-pink-500/10'
                         : 'border-purple-500/30 bg-slate-950/30 hover:border-purple-500/50'
                     }`}
                   >
-                    {(planType === 'free' || (planType === 'trial' && trialExpired) || (planType !== 'standard' && planType !== 'premium') || ((planType === 'standard' || planType === 'premium') && visualAnalysesUsed && visualAnalysesUsed.used >= visualAnalysesUsed.limit)) && (
+                    {/* Visual analysis limit badge on border - for standard, premium users and developers */}
+                    {isDeveloper && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500/95 to-blue-500/95 border-2 border-cyan-300/60 rounded-full text-white text-sm font-bold shadow-xl shadow-cyan-500/30 flex items-center justify-center min-w-[40px]">
+                        <span className="text-cyan-100">∞</span>
+                      </div>
+                    )}
+                    {!isDeveloper && (planType === 'standard' || planType === 'premium') && visualAnalysesUsed && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500/95 to-blue-500/95 border-2 border-cyan-300/60 rounded-full text-white text-xs font-bold shadow-xl shadow-cyan-500/30 flex items-center justify-center min-w-[50px]">
+                        {visualAnalysesUsed.used}/{visualAnalysesUsed.limit}
+                      </div>
+                    )}
+                    {!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired) || ((planType !== 'trial' || trialExpired) && planType !== 'standard' && planType !== 'premium') || ((planType === 'standard' || planType === 'premium') && visualAnalysesUsed && visualAnalysesUsed.used >= visualAnalysesUsed.limit)) && (
                       <div className="absolute top-2 right-2">
                         <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded">🔒</span>
                       </div>
@@ -630,14 +675,8 @@ export default function Analyze() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mb-2">{t.analyze.analysisTypeVisualDesc}</p>
-                    {/* Show visual analysis limit for standard and premium users */}
-                    {(planType === 'standard' || planType === 'premium') && visualAnalysesUsed && (
-                      <div className="mt-2 px-2 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded text-cyan-300 text-xs font-semibold text-center">
-                        {visualAnalysesUsed.used}/{visualAnalysesUsed.limit} {language === 'tr' ? 'günlük' : 'daily'}
-                      </div>
-                    )}
-                    {/* Show upgrade button for free users or expired trial users */}
-                    {(planType === 'free' || (planType === 'trial' && trialExpired)) && (
+                    {/* Show upgrade button only for expired trial users (free users already have button at top right) */}
+                    {(planType === 'trial' && trialExpired) && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -734,8 +773,11 @@ export default function Analyze() {
                 <textarea
                   value={dreamText}
                   onChange={(e) => setDreamText(e.target.value.slice(0, maxCharacters))}
-                  placeholder={t.analyze.placeholder}
-                  className="w-full h-48 md:h-64 px-3 md:px-4 py-2 md:py-3 bg-slate-950/50 border border-purple-500/30 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none text-sm md:text-base"
+                  placeholder={!isDeveloper && planType === null ? (language === 'tr' ? 'Analiz yapmak için lütfen bir plan satın alın...' : 'Please purchase a plan to analyze...') : t.analyze.placeholder}
+                  disabled={!isDeveloper && planType === null}
+                  className={`w-full h-48 md:h-64 px-3 md:px-4 py-2 md:py-3 bg-slate-950/50 border border-purple-500/30 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none text-sm md:text-base ${
+                    !isDeveloper && planType === null ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                   maxLength={maxCharacters}
                   required
                 />
@@ -754,7 +796,7 @@ export default function Analyze() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || !dreamText.trim()}
+                disabled={isSubmitting || !dreamText.trim() || (!isDeveloper && planType === null)}
                 className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold hover:from-pink-500 hover:to-purple-500 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 {isSubmitting ? (
